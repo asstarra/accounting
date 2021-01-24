@@ -3,6 +3,7 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -11,41 +12,42 @@ import (
 	"github.com/pkg/errors"
 )
 
-type IdTitle struct {
-	Id    int
-	Title string
-}
-
-func SelectIdTitle(tableName string, db *sql.DB) ([]*IdTitle, error) {
+func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, error) {
 	arr := make([]*IdTitle, 0)
-	if err := db.Ping(); err != nil {
-		err = errors.Wrap(err, "Не удалось подключиться к базе данных")
-		return arr, err
-	}
-	// QwStr := "SELECT id, title FROM " + tableName
-	table := data.Tab[tableName]
-	title := table.Columns["Title"].Name
-	id := table.Columns["Id"].Name
-	QwStr := "SELECT " + id + " AS id, " + title + " AS title FROM " + table.Name
-	rows, err := db.Query(QwStr)
-	if err != nil {
-		return arr, errors.Wrap(err, "In SelectIdTitle request failed. Qwery string = "+QwStr)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		row := IdTitle{}
-		err := rows.Scan(&row.Id, &row.Title)
-		if err != nil {
-			err = errors.Wrap(err, "In SelectIdTitle не удалось расшифровать строчку")
-			return arr, err
+	m := make(map[int64]string)
+	if err := (func() error {
+		if err := db.Ping(); err != nil {
+			err = errors.Wrap(err, data.S.ErrorPingDB)
+			return err
 		}
-		arr = append(arr, &row)
+		table := data.Tab[tableName]
+		sId := table.Columns["Id"].Name
+		sTitle := table.Columns["Title"].Name
+		QwStr := fmt.Sprintf("SELECT %s AS id, %s AS title FROM %s", sId, sTitle, table.Name)
+		rows, err := db.Query(QwStr)
+		if err != nil {
+			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			row := IdTitle{}
+			err := rows.Scan(&row.Id, &row.Title)
+			if err != nil {
+				err = errors.Wrap(err, data.S.ErrorDecryptRow)
+				return err
+			}
+			arr = append(arr, &row)
+			m[row.Id] = row.Title
+		}
+		return nil
+	}()); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("In SelectIdTitle(tableName = %s)", tableName))
 	}
-	return arr, nil
+	return arr, m, nil
 }
 
 type itemType struct {
-	id   int
+	id   int64
 	last string
 	now  string
 }
@@ -64,7 +66,7 @@ type windowsFormType struct {
 
 func itemAdd_EntityType(s string) itemType {
 	return itemType{
-		id:   -1,
+		id:   0,
 		last: "",
 		now:  s,
 	}
@@ -75,7 +77,7 @@ func (item *itemType) update(now string) {
 }
 
 func newModelType(tableName string, db *sql.DB) (*modelType, error) {
-	arr, err := SelectIdTitle(tableName, db)
+	arr, _, err := SelectIdTitle(db, tableName)
 	if err != nil {
 		err = errors.Wrap(err, "In newModelType произошла ошибка запроса данных")
 		log.Println("ERROR!", err)
@@ -112,11 +114,11 @@ func (wf *windowsFormType) save(tableName string, db *sql.DB) error {
 	QwStrDel := "DELETE FROM " + table.Name + " WHERE " + id + " NOT IN ("
 	pointFlag := false
 	for _, v := range wf.lbModel.items {
-		if v.id != -1 {
+		if v.id != 0 {
 			if pointFlag {
 				QwStrDel += ", "
 			}
-			QwStrDel += strconv.Itoa(v.id)
+			QwStrDel += strconv.FormatInt(v.id, 64) //strconv.Itoa(v.id)
 			pointFlag = true
 		}
 	}
@@ -160,7 +162,7 @@ func (wf *windowsFormType) save(tableName string, db *sql.DB) error {
 						log.Println("ERROR!", err)
 						walk.MsgBox(wf, "Внимание, возможна некорректная работа программы", err.Error(), walk.MsgBoxIconWarning)
 					} else {
-						wf.lbModel.items[i].id = int(id)
+						wf.lbModel.items[i].id = id
 					}
 				}
 			} else {

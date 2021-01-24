@@ -1,43 +1,34 @@
 package window
 
 import (
+	"accounting/data"
 	"database/sql"
 	"log"
-
-	// "strconv"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
 	"github.com/pkg/errors"
 )
 
-type EntityRecChild struct {
-	IdTitle
-	Count int
+type windowsFormEntityRec struct {
+	*walk.Dialog
+	buttonEntitiesWidget *walk.PushButton
 }
 
-func EntityRecRunDialog(owner walk.Form, entity *EntityRecChild, db *sql.DB) (int, error) {
-	log.Println("INFO -", "BEGIN window - ENTITY_REC")
-	// sHeading := "Внимание"
-	// msgBoxIcon := walk.MsgBoxIconWarning
-	// var dlg *walk.Dialog
+func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *EntityRecChild) (int, error) {
+	log.Printf(data.S.BeginWindow, data.S.EntityRec)
 	var databind *walk.DataBinder
-	// var wf *walk.Dialog
-	var wf struct {
-		*walk.Dialog
-	}
-	//wf := &windowsFormEntity{}
+	wf := windowsFormEntityRec{}
 
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
-		Title:    "Компонент",
+		Title:    data.S.HeadingEntityRec,
 		DataBinder: dec.DataBinder{
 			AssignTo:       &databind,
-			Name:           "entity",
-			DataSource:     entity,
+			Name:           "child",
+			DataSource:     child,
 			ErrorPresenter: dec.ToolTipErrorPresenter{},
 		},
-		// Size:     dec.Size{100, 100},
 		Layout: dec.VBox{MarginsZero: true},
 		Children: []dec.Widget{
 			dec.Composite{
@@ -47,8 +38,29 @@ func EntityRecRunDialog(owner walk.Form, entity *EntityRecChild, db *sql.DB) (in
 						Text: "Название:",
 					},
 					dec.PushButton{
-						MinSize: dec.Size{150, 10},
-						Text:    dec.Bind("Title"),
+						AssignTo: &wf.buttonEntitiesWidget,
+						Enabled:  !isChange,
+						MinSize:  dec.Size{150, 10},
+						Text:     child.Title,
+						// Text:    dec.Bind("Title"),
+						OnClicked: func() {
+							if err := (func() error {
+								idTitle := child.IdTitle
+								cmd, err := EntitiesRunDialog(wf, db, false, &idTitle)
+								log.Printf(data.S.EndWindow, data.S.Entities, cmd)
+								if err != nil {
+									return errors.Wrapf(err, "In EntitiesRunDialog(isChage = %t, IdTitle = %v)", false, idTitle)
+								}
+								if cmd == walk.DlgCmdOK {
+									child.Id = idTitle.Id
+									child.Title = idTitle.Title
+									wf.buttonEntitiesWidget.SetText(child.Title)
+								}
+								return nil
+							}()); err != nil {
+								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+							}
+						},
 					},
 
 					dec.Label{
@@ -65,7 +77,7 @@ func EntityRecRunDialog(owner walk.Form, entity *EntityRecChild, db *sql.DB) (in
 				Layout: dec.HBox{},
 				Children: []dec.Widget{
 					dec.PushButton{
-						Text: "OK",
+						Text: data.S.ButtonOK,
 						OnClicked: func() {
 							if err := databind.Submit(); err != nil {
 								log.Println(err)
@@ -75,19 +87,18 @@ func EntityRecRunDialog(owner walk.Form, entity *EntityRecChild, db *sql.DB) (in
 						},
 					},
 					dec.PushButton{
-						Text:      "Отмена",
+						Text:      data.S.ButtonCansel,
 						OnClicked: func() { wf.Cancel() },
 					},
 				},
 			},
 		},
 	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, "Could not create Window Form Entity_rec")
-		log.Println("ERROR!", err)
+		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Println("INFO -", "CREATE window - ENTITY_REC")
+	log.Printf(data.S.CreateWindow, data.S.EntityRec)
 
-	log.Println("INFO -", "RUN window - ENTITY_REC")
+	log.Printf(data.S.RunWindow, data.S.EntityRec)
 	return wf.Run(), nil
 }
