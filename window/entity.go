@@ -18,25 +18,22 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 			err = errors.Wrap(err, data.S.ErrorPingDB)
 			return err
 		}
-		table := data.Tab["EntityRec"]
-		sIdC := table.Columns["Child"].Name
-		sIdP := table.Columns["Parent"].Name
-		sCount := table.Columns["Count"].Name
-		// GO-TO выборка названия и типа из таблицы entity
-		QwStr := fmt.Sprintf("SELECT %s AS idc, %s AS count FROM %s WHERE %s = %d",
-			sIdC, sCount, table.Name, sIdP, parent)
+
+		QwStr := data.SelectEntityRecChild(parent)
 		rows, err := db.Query(QwStr)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
 		}
 		defer rows.Close()
+		var e_type, title string
 		for rows.Next() {
 			row := EntityRecChild{}
-			err := rows.Scan(&row.Id, &row.Count)
+			err := rows.Scan(&row.Id, &e_type, &title, &row.Count)
 			if err != nil {
 				err = errors.Wrap(err, data.S.ErrorDecryptRow)
 				return err
 			}
+			row.Title = e_type + " " + title
 			arr = append(arr, &row)
 		}
 		return nil
@@ -58,13 +55,17 @@ type windowsFormEntity struct {
 	tv         *walk.TableView
 }
 
-func newModelEntityComponent() (*modelEntityComponent, error) { //GO-TO
-	m := new(modelEntityComponent)
-	m.items = make([]*EntityRecChild, 0)
-	m.items = append(m.items, &EntityRecChild{IdTitle: IdTitle{Id: 2, Title: "asd"}, Count: 4})
-	m.items = append(m.items, &EntityRecChild{IdTitle: IdTitle{Id: 3, Title: "qwe"}, Count: 8})
-	m.items = append(m.items, &EntityRecChild{IdTitle: IdTitle{Id: 4, Title: "zxc"}, Count: 0})
-	return m, nil
+func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error) {
+	var err error
+	wf := new(windowsFormEntity)
+	wf.modelTable = new(modelEntityComponent)
+	wf.modelTable.items = *entity.Children
+	wf.modelType, _, err = SelectIdTitle(db, "EntityType")
+	if err != nil {
+		err = errors.Wrap(err, data.S.ErrorTypeInit)
+		return nil, err
+	}
+	return wf, nil
 }
 
 func (m *modelEntityComponent) RowCount() int {
@@ -85,20 +86,11 @@ func (m *modelEntityComponent) Value(row, col int) interface{} {
 
 func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.Entity)
-	// msgBoxIcon := walk.MsgBoxIconWarning
-	sButtonAdd := " компонент"
-	var err error
+	sButtonAdd := " компонент" // GO-TO возможно нужно? вынести строку
 	var databind *walk.DataBinder
-	wf := &windowsFormEntity{}
-	wf.modelType, _, err = SelectIdTitle(db, "EntityType")
+	wf, err := newWindowsFormEntity(db, entity)
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorTypeInit)
-		return 0, err
-	}
-	wf.modelTable, err = newModelEntityComponent()
-	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorTableInit)
-		return 0, err
+		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
 
 	if err := (dec.Dialog{
@@ -175,14 +167,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 									{Title: "Количество"},
 								},
 								ColumnSpan: 2,
-
-								Model: wf.modelTable,
-								OnCurrentIndexChanged: func() { //GO-TO
-									fmt.Printf("CurrentIndexes: %v\n", wf.tv.CurrentIndex())
-								},
-								OnSelectedIndexesChanged: func() {
-									fmt.Printf("SelectedIndexes: %v\n", wf.tv.SelectedIndexes())
-								},
+								Model:      wf.modelTable,
 							},
 
 							dec.PushButton{
@@ -201,31 +186,47 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								ColumnSpan: 2,
 								Text:       data.S.ButtonChange + sButtonAdd,
 								OnClicked: func() {
-									// GO-TO
+									log.Println(data.S.Info, data.S.LogChange)
+									if err := wf.change(db, entity); err != nil {
+										err = errors.Wrap(err, data.S.ErrorChange)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+									}
 								},
 							},
 							dec.PushButton{
 								ColumnSpan: 2,
 								Text:       data.S.ButtonDelete + sButtonAdd,
 								OnClicked: func() {
-									// GO-TO
+									log.Println(data.S.Info, data.S.LogDelete)
+									if err := wf.delete(db, entity); err != nil {
+										err = errors.Wrap(err, data.S.ErrorDelete)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+									}
 								},
 							},
 
 							dec.PushButton{
 								Text: data.S.ButtonOK,
 								OnClicked: func() {
+									log.Println(data.S.Info, data.S.LogOk)
 									if err := databind.Submit(); err != nil {
-										log.Println(err)
-										// GO-TO
+										err = errors.Wrap(err, data.S.ErrorSubmit)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 										return
 									}
+									entity.Children = &wf.modelTable.items
 									wf.Accept()
 								},
 							},
 							dec.PushButton{
-								Text:      data.S.ButtonCansel,
-								OnClicked: func() { wf.Cancel() },
+								Text: data.S.ButtonCansel,
+								OnClicked: func() {
+									log.Println(data.S.Info, data.S.LogCansel)
+									wf.Cancel()
+								},
 							},
 						},
 					},
@@ -245,28 +246,27 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	child := EntityRecChild{}
 	cmd, err := EntityRecRunDialog(wf, db, false, &child)
-	// cmd, err := EntityRunDialog(wf, db, false, &entity)
 	log.Printf(data.S.EndWindow, data.S.EntityRec, cmd)
 	if err != nil {
-		return errors.Wrapf(err, "In EntityRecRunDialog(entity = %v)", entity)
+		return errors.Wrapf(err, data.S.InEntityRecRunDialog, child)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
 	if entity.Id != 0 {
+		QwStr := data.InsertEntityRec(entity.Id, child.Id, child.Count)
 		if err = db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		table := data.Tab["EntityRec"]
-		sIdC := table.Columns["Child"].Name
-		sIdP := table.Columns["Parent"].Name
-		sCount := table.Columns["Count"].Name
-		QwStr := fmt.Sprintf("INSERT %s (%s, %s, %s) VALUES (%d, %d, %d)",
-			table.Name, sIdP, entity.Id, sIdC, child.Id, sCount, child.Count)
-		fmt.Println(QwStr)
-		_, err := db.Exec(QwStr)
+		result, err := db.Exec(QwStr)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+		}
+		if id, err := result.LastInsertId(); err != nil {
+			log.Println(data.S.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
+			walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
+		} else {
+			child.Id = id
 		}
 	}
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
@@ -276,6 +276,60 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
 	}
-	//GO-TO
+	return nil
+}
+
+func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
+	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		return nil
+	}
+	index := wf.tv.CurrentIndex()
+	child := wf.modelTable.items[index]
+	cmd, err := EntityRecRunDialog(wf, db, true, child)
+	log.Printf(data.S.EndWindow, data.S.EntityRec, cmd)
+	if err != nil {
+		return errors.Wrapf(err, data.S.InEntityRecRunDialog, child)
+	}
+	if cmd != walk.DlgCmdOK {
+		return nil
+	}
+	if entity.Id != 0 {
+		QwStr := data.UpdateEntityRec(entity.Id, child.Id, child.Count)
+		if err = db.Ping(); err != nil {
+			return errors.Wrap(err, data.S.ErrorPingDB)
+		}
+		if _, err := db.Exec(QwStr); err != nil {
+			return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
+		}
+	}
+	wf.modelTable.PublishRowChanged(index)
+	return nil
+}
+
+func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
+	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		return nil
+	}
+	index := wf.tv.CurrentIndex()
+	log.Println(data.S.Debug, index, *wf.modelTable.items[index])
+	id := wf.modelTable.items[index].Id
+	if entity.Id != 0 {
+		QwStr := data.DeleteEntityRec(entity.Id, id)
+		if err := db.Ping(); err != nil {
+			return errors.Wrap(err, data.S.ErrorPingDB)
+		}
+		if _, err := db.Exec(QwStr); err != nil {
+			return errors.Wrap(err, data.S.ErrorDeleteDB+QwStr)
+		}
+	}
+	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
+	wf.modelTable.items = wf.modelTable.items[:index+copy(wf.modelTable.items[index:], wf.modelTable.items[index+1:])]
+	wf.modelTable.PublishRowsRemoved(index, index)
+	if trackLatest {
+		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
+	}
+	wf.modelTable.PublishRowsChanged(index, wf.modelTable.RowCount()-1)
 	return nil
 }

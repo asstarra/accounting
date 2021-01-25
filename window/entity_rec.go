@@ -42,22 +42,23 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 						Enabled:  !isChange,
 						MinSize:  dec.Size{150, 10},
 						Text:     child.Title,
-						// Text:    dec.Bind("Title"),
 						OnClicked: func() {
+							log.Println(data.S.Info, data.S.LogChoose)
 							if err := (func() error {
 								idTitle := child.IdTitle
 								cmd, err := EntitiesRunDialog(wf, db, false, &idTitle)
 								log.Printf(data.S.EndWindow, data.S.Entities, cmd)
 								if err != nil {
-									return errors.Wrapf(err, "In EntitiesRunDialog(isChage = %t, IdTitle = %v)", false, idTitle)
+									return errors.Wrapf(err, data.S.InEntitiesRunDialog, false, idTitle)
 								}
 								if cmd == walk.DlgCmdOK {
-									child.Id = idTitle.Id
-									child.Title = idTitle.Title
+									child.IdTitle = idTitle
 									wf.buttonEntitiesWidget.SetText(child.Title)
 								}
 								return nil
 							}()); err != nil {
+								err = errors.Wrap(err, data.S.ErrorChoose)
+								log.Println(data.S.Error, err)
 								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 							}
 						},
@@ -79,16 +80,22 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 					dec.PushButton{
 						Text: data.S.ButtonOK,
 						OnClicked: func() {
+							log.Println(data.S.Info, data.S.LogOk)
 							if err := databind.Submit(); err != nil {
-								log.Println(err)
+								err = errors.Wrap(err, data.S.ErrorSubmit)
+								log.Println(data.S.Error, err)
+								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 								return
 							}
 							wf.Accept()
 						},
 					},
 					dec.PushButton{
-						Text:      data.S.ButtonCansel,
-						OnClicked: func() { wf.Cancel() },
+						Text: data.S.ButtonCansel,
+						OnClicked: func() {
+							log.Println(data.S.Info, data.S.LogCansel)
+							wf.Cancel()
+						},
 					},
 				},
 			},

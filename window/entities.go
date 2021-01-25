@@ -18,16 +18,7 @@ func SelectEntities(db *sql.DB, title string, entityType int64) ([]*Entity, erro
 			err = errors.Wrap(err, data.S.ErrorPingDB)
 			return err
 		}
-		table := data.Tab["Entity"]
-		sId := table.Columns["Id"].Name
-		sTitle := table.Columns["Title"].Name
-		sType := table.Columns["Type"].Name
-		sSpec := table.Columns["Specification"].Name
-		sProdLine := table.Columns["ProductionLine"].Name
-		sNote := table.Columns["Note"].Name
-		QwStr := fmt.Sprintf("SELECT %s AS id, %s AS title, %s AS type, %s AS spec, %s AS pline, %s AS note FROM %s",
-			sId, sTitle, sType, sSpec, sProdLine, sNote, table.Name)
-		//GO-TO выборка строчек по условию
+		QwStr := data.SelectEntity(title, entityType)
 		rows, err := db.Query(QwStr)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
@@ -113,7 +104,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 	var err error
 	wf, err := newWindowsFormEntities(db)
 	if err != nil {
-		return 0, errors.Wrap(err, "In newWindowsFormEntities()")
+		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
 
 	if err = (dec.Dialog{
@@ -123,7 +114,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 		Layout:  dec.VBox{},
 		MinSize: dec.Size{450, 0},
 		Children: []dec.Widget{
-			// GO-TO
+			// GO-TO // Добавить кнопки для сортировки
 			dec.TableView{
 				AssignTo: &wf.tv,
 				Columns: []dec.TableViewColumn{
@@ -134,12 +125,6 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 				},
 				MinSize: dec.Size{0, 200},
 				Model:   wf.modelTable,
-				OnCurrentIndexChanged: func() { //GO-TO
-					fmt.Printf("CurrentIndexes: %v\n", wf.tv.CurrentIndex())
-				},
-				OnSelectedIndexesChanged: func() {
-					fmt.Printf("SelectedIndexes: %v\n", wf.tv.SelectedIndexes())
-				},
 			},
 			dec.Composite{
 				Layout:  dec.HBox{},
@@ -189,7 +174,6 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 						OnClicked: func() {
 							log.Println(data.S.Info, data.S.LogOk)
 							if wf.modelTable.RowCount() > 0 && wf.tv.CurrentIndex() != -1 {
-								fmt.Println(wf.tv.CurrentIndex())
 								index := wf.tv.CurrentIndex()
 								idTitle.Id = wf.modelTable.items[index].Id
 								idType := wf.modelTable.items[index].Type
@@ -197,7 +181,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 								idTitle.Title = sType + " " + wf.modelTable.items[index].Title
 								wf.Accept()
 							} else {
-								walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChoseRow, data.Icon.Info)
+								walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
 							}
 						},
 					},
@@ -225,24 +209,16 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 	cmd, err := EntityRunDialog(wf, db, &entity)
 	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
 	if err != nil {
-		return errors.Wrapf(err, "In EntityRunDialog(entity = %v)", entity) //GO-TO
+		return errors.Wrapf(err, data.S.InEntityRunDialog, entity)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
+	QwStr := data.InsertEntity(entity.Title, entity.Specification, entity.Note, entity.ProductionLine, entity.Type)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
-	table := data.Tab["Entity"]
-	sTitle := table.Columns["Title"].Name
-	sType := table.Columns["Type"].Name
-	sSpec := table.Columns["Specification"].Name
-	sProdLine := table.Columns["ProductionLine"].Name
-	sNote := table.Columns["Note"].Name
-	QwStr := fmt.Sprintf("INSERT %s (%s, %s, %s, %s, %s) VALUES (%s, %d, %s, %t, %s)",
-		table.Name, sTitle, sType, sSpec, sProdLine, sNote,
-		Empty(entity.Title), entity.Type, Empty(entity.Specification), entity.ProductionLine, Empty(entity.Note))
-	fmt.Println(QwStr)
+
 	result, err := db.Exec(QwStr)
 	if err != nil {
 		return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
@@ -255,84 +231,72 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
 	}
-
+	fmt.Println(10)
 	id, err := result.LastInsertId()
 	if err != nil {
 		log.Println(data.S.Error, data.S.ErrorInsertIndexLog)
 		walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
 		return nil
 	}
-	table = data.Tab["EntityRec"]
-	sIdC := table.Columns["Child"].Name
-	sIdP := table.Columns["Parent"].Name
-	sCount := table.Columns["Count"].Name
+	fmt.Println(12)
+	wf.modelTable.items[index].Id = id
 	for _, v := range *entity.Children {
-		QwStrChild := fmt.Sprintf("INSERT %s (%s, %s, %s) VALUES (%d, %d, %d)",
-			table.Name, sIdP, sIdC, sCount, id, v.Id, v.Count)
-		_, err := db.Exec(QwStrChild)
-		if err != nil {
+		QwStrChild := data.InsertEntityRec(id, v.Id, v.Count)
+		fmt.Println(13, QwStrChild)
+		if _, err := db.Exec(QwStrChild); err != nil {
 			err = errors.Wrap(err, data.S.ErrorAddDB+QwStrChild)
 			log.Println(data.S.Error, err)
-			walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Critical)
+			walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 		}
 	}
+	fmt.Println(14)
 	return nil
 }
 
 func (wf windowsFormEntities) change(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChoseRow, data.Icon.Info)
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
+	var err error
 	index := wf.tv.CurrentIndex()
-	entity := *wf.modelTable.items[index]
-	//GO-TO
-	children := make([]*EntityRecChild, 0)
-	entity.Children = &children
-	cmd, err := EntityRunDialog(wf, db, &entity)
-	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
+	entity := wf.modelTable.items[index]
+	children, err := SelectEntityRecChild(db, entity.Id)
 	if err != nil {
-		return errors.Wrapf(err, "In EntityRunDialog(entity = %v)", entity) //GO-TO
+		return err // GO-TO подробно расписать ошибку.
+	}
+	entity.Children = &children
+	cmd, err := EntityRunDialog(wf, db, entity)
+	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
+	fmt.Printf(data.S.InEntityRunDialog, *entity)
+	if err != nil {
+		return errors.Wrapf(err, data.S.InEntityRunDialog, *entity)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
+	QwStr := data.UpdateEntity(entity.Title, entity.Specification, entity.Note, entity.ProductionLine, entity.Type, entity.Id)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
-	table := data.Tab["Entity"]
-	sId := table.Columns["Id"].Name
-	sTitle := table.Columns["Title"].Name
-	sType := table.Columns["Type"].Name
-	sSpec := table.Columns["Specification"].Name
-	sProdLine := table.Columns["ProductionLine"].Name
-	sNote := table.Columns["Note"].Name
-	QwStr := fmt.Sprintf("UPDATE %s SET %s = %s, %s = %d, %s = %s, %s = %t, %s = %s WHERE %s = %d",
-		table.Name, sTitle, Empty(entity.Title), sType, entity.Type, sSpec, Empty(entity.Specification),
-		sProdLine, entity.ProductionLine, sNote, Empty(entity.Note), sId, entity.Id)
-	fmt.Println(QwStr)
 	_, err = db.Exec(QwStr)
 	if err != nil {
 		return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
 	}
-
-	wf.modelTable.items[index] = &entity
+	wf.modelTable.items[index] = entity
 	wf.modelTable.PublishRowChanged(index)
 	return nil
 }
 
 func (wf windowsFormEntities) delete(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChoseRow, data.Icon.Info)
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
-	// if wf.modelTable.RowCount() > 0 && wf.tv.CurrentIndex() != -1 {
 	index := wf.tv.CurrentIndex()
-	log.Println(index, *wf.modelTable.items[index])
+	log.Println(data.S.Debug, index, *wf.modelTable.items[index])
 	id := wf.modelTable.items[index].Id
-	table := data.Tab["Entity"]
-	sId := table.Columns["Id"].Name
-	QwStr := fmt.Sprintf("DELETE FROM %s WHERE %s = %d", table.Name, sId, id)
+	QwStr := data.DeleteEntity(id)
 	if err := db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
@@ -353,8 +317,6 @@ func (wf windowsFormEntities) delete(db *sql.DB) error {
 	// if index >= 0 {
 	// 	wf.tv.SetCurrentIndex(index)
 	// }
-	// } else {
-	// 	walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChoseRow, data.Icon.Info)
-	// }
+	wf.modelTable.PublishRowsChanged(index, wf.modelTable.RowCount()-1)
 	return nil
 }

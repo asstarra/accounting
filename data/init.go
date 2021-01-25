@@ -95,6 +95,7 @@ var S struct {
 	LogAdd    string
 	LogChange string
 	LogDelete string
+	LogChoose string
 
 	ButtonOK     string
 	ButtonCansel string
@@ -102,7 +103,11 @@ var S struct {
 	ButtonChange string
 	ButtonDelete string
 
-	MsgChoseRow string
+	InEntitiesRunDialog  string
+	InEntityRunDialog    string
+	InEntityRecRunDialog string
+
+	MsgChooseRow string
 
 	ErrorTableInit        string
 	ErrorTypeInit         string
@@ -123,6 +128,8 @@ var S struct {
 	ErrorDeleteDB         string
 	ErrorInsertIndexLog   string
 	ErrorInsertIndex      string
+	ErrorSubmit           string
+	ErrorChoose           string
 }
 
 func initString() {
@@ -156,6 +163,7 @@ func initString() {
 	S.LogAdd = "Add"
 	S.LogChange = "Change"
 	S.LogDelete = "Delete"
+	S.LogChoose = "Choose"
 
 	S.ButtonOK = "OK"
 	S.ButtonCansel = "Отмена"
@@ -163,7 +171,11 @@ func initString() {
 	S.ButtonChange = "Изменить"
 	S.ButtonDelete = "Удалить"
 
-	S.MsgChoseRow = "Выберите строчку"
+	S.InEntitiesRunDialog = "In EntitiesRunDialog(isChage = %t, IdTitle = %v)"
+	S.InEntityRunDialog = "In EntityRunDialog(entity = %v)"
+	S.InEntityRecRunDialog = "In EntityRecRunDialog(child = %v)"
+
+	S.MsgChooseRow = "Выберите строчку"
 
 	S.ErrorTableInit = "При заполнении таблицы произошла ошибка"
 	S.ErrorTypeInit = "Не удалось узнать список типов"
@@ -186,6 +198,8 @@ func initString() {
 	S.ErrorInsertIndex = "Это сообщение не должно показываться.\n" +
 		"При вставке новой строки в базу данных не удалось узнать индекс  вставляемой строки.\n" +
 		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке."
+	S.ErrorSubmit = "Не удалось сохранить данные"
+	S.ErrorChoose = "Не удалось выбрать данные"
 }
 
 func initFromFile(filename string, data interface{}) error {
