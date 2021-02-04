@@ -3,7 +3,6 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/lxn/walk"
@@ -38,7 +37,7 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrap(err, fmt.Sprintf("In SelectEntityRecChild(parent = %d)", parent))
+		return arr, errors.Wrapf(err, data.S.InSelectEntityRecChild, parent)
 	}
 	return arr, nil
 }
@@ -92,7 +91,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
-
+	log.Printf(data.S.InitWindow, data.S.Entity)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingEntity,
@@ -272,6 +271,7 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
 	wf.modelTable.items = append(wf.modelTable.items, &child)
 	index := len(wf.modelTable.items) - 1
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowsInserted(index, index)
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
@@ -303,6 +303,7 @@ func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 			return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
 		}
 	}
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowChanged(index)
 	return nil
 }
@@ -313,7 +314,6 @@ func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
-	log.Println(data.S.Debug, index, *wf.modelTable.items[index])
 	id := wf.modelTable.items[index].Id
 	if entity.Id != 0 {
 		QwStr := data.DeleteEntityRec(entity.Id, id)
@@ -326,6 +326,7 @@ func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	}
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
 	wf.modelTable.items = wf.modelTable.items[:index+copy(wf.modelTable.items[index:], wf.modelTable.items[index+1:])]
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowsRemoved(index, index)
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)

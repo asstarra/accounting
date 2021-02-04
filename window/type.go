@@ -3,9 +3,7 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
-	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
@@ -20,10 +18,7 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 			err = errors.Wrap(err, data.S.ErrorPingDB)
 			return err
 		}
-		table := data.Tab[tableName]
-		sId := table.Columns["Id"].Name
-		sTitle := table.Columns["Title"].Name
-		QwStr := fmt.Sprintf("SELECT %s AS id, %s AS title FROM %s", sId, sTitle, table.Name)
+		QwStr := data.SelectType("EntityType")
 		rows, err := db.Query(QwStr)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
@@ -41,319 +36,115 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 		}
 		return nil
 	}()); err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("In SelectIdTitle(tableName = %s)", tableName))
+		err = errors.Wrapf(err, data.S.InSelectIdTitle, tableName)
 	}
 	return arr, m, nil
 }
 
-type itemType struct {
-	id   int64
-	last string
-	now  string
-}
-
-type modelType struct {
-	walk.ListModelBase
-	items []itemType
+type modelTypeComponent struct {
+	walk.TableModelBase
+	items []*IdTitle
 }
 
 type windowsFormType struct {
 	*walk.Dialog
-	lbModel         *modelType
-	lbWidget        *walk.ListBox
-	textToAddWidget *walk.LineEdit
+	modelTable *modelTypeComponent
+	tv         *walk.TableView
+	textW      *walk.LineEdit
 }
 
-func itemAdd_EntityType(s string) itemType {
-	return itemType{
-		id:   0,
-		last: "",
-		now:  s,
-	}
-}
-
-func (item *itemType) update(now string) {
-	item.now = now
-}
-
-func newModelType(tableName string, db *sql.DB) (*modelType, error) {
-	arr, _, err := SelectIdTitle(db, tableName)
+func newWindowsFormType(db *sql.DB, tableName string) (*windowsFormType, error) {
+	var err error
+	wf := new(windowsFormType)
+	wf.modelTable = new(modelTypeComponent)
+	wf.modelTable.items, _, err = SelectIdTitle(db, "EntityType")
 	if err != nil {
-		err = errors.Wrap(err, "In newModelType произошла ошибка запроса данных")
-		log.Println("ERROR!", err)
+		err = errors.Wrap(err, data.S.ErrorTableInit)
 		return nil, err
 	}
-	m := &modelType{items: make([]itemType, len(arr))}
-	for i, v := range arr {
-		m.items[i].id = v.Id
-		m.items[i].last = v.Title
-		m.items[i].now = v.Title
-	}
-	return m, nil
+	return wf, nil
 }
 
-func (m *modelType) ItemCount() int {
+func (m *modelTypeComponent) RowCount() int {
 	return len(m.items)
 }
 
-func (m *modelType) Value(index int) interface{} {
-	return m.items[index].now
+func (m *modelTypeComponent) Value(row, col int) interface{} {
+	item := m.items[row]
+	switch col {
+	case 0:
+		return item.Title
+	}
+	log.Println(data.S.Panic, data.S.ErrorUnexpectedColumn)
+	panic(data.S.ErrorUnexpectedColumn)
 }
 
-func (wf *windowsFormType) save(tableName string, db *sql.DB) error {
-	if err := db.Ping(); err != nil {
-		err = errors.Wrap(err, "Не удалось подключиться к базе данных")
-		log.Println("ERROR!", err)
-		return err
-	}
-	table := data.Tab[tableName]
-	title := table.Columns["Title"].Name
-	id := table.Columns["Id"].Name
-	QwStrIns := "INSERT INTO " + table.Name + " (" + title + ") VALUES (?)"
-	QwStrUpd := "UPDATE " + table.Name + " SET " + title + " = ? WHERE title = ?"
-	QwStrDel := "DELETE FROM " + table.Name + " WHERE " + id + " NOT IN ("
-	pointFlag := false
-	for _, v := range wf.lbModel.items {
-		if v.id != 0 {
-			if pointFlag {
-				QwStrDel += ", "
-			}
-			QwStrDel += strconv.FormatInt(v.id, 64) //strconv.Itoa(v.id)
-			pointFlag = true
-		}
-	}
-	QwStrDel += ")"
-
-	tx, err := db.Begin()
+func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
+	log.Printf(data.S.BeginWindow, data.S.Type)
+	wf, err := newWindowsFormType(db, tableName)
 	if err != nil {
-		err = errors.Wrap(err, "Не удалось начать транзакцию")
-		log.Println("ERROR!", err)
-		return err
+		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
-	_, err = tx.Exec(QwStrDel)
-	if err != nil {
-		err = errors.Wrap(err, "Не удалось удалить строчки")
-		log.Println("ERROR!", err)
-		if errBack := tx.Rollback(); errBack != nil {
-			errBack = errors.Wrap(errBack, "Не удалось откатить транзакцию")
-			err := errors.Wrap(errBack, err.Error()+"\n")
-			log.Println("ERROR!", err)
-		}
-		return err
-	}
-	for i, v := range wf.lbModel.items {
-		if v.last != v.now {
-			if v.last == "" {
-				result, err := tx.Exec(QwStrIns, v.now)
-				if err != nil {
-					err = errors.Wrap(err, "Не удалось вставить строчку со значением "+v.now)
-					log.Println("ERROR!", err)
-					if errBack := tx.Rollback(); errBack != nil {
-						errBack = errors.Wrap(errBack, "Не удалось откатить транзакцию")
-						err := errors.Wrap(errBack, err.Error()+"\n")
-						log.Println("ERROR!", err)
-					}
-					return err
-				} else {
-					wf.lbModel.items[i].last = v.now
-					if id, err := result.LastInsertId(); err != nil {
-						err = errors.Wrap(err, "Не удалось узнать индекс вставленной строчки")
-						err = errors.Wrap(err, "При успешном сохранении, рекомендуется закрыть вкладку и открыть ее заново, иначе работа программы не гарантируется\n")
-						log.Println("ERROR!", err)
-						walk.MsgBox(wf, "Внимание, возможна некорректная работа программы", err.Error(), walk.MsgBoxIconWarning)
-					} else {
-						wf.lbModel.items[i].id = id
-					}
-				}
-			} else {
-				_, err := tx.Exec(QwStrUpd, v.now, v.last)
-				if err != nil {
-					err = errors.Wrap(err, "Не удалось обновить значение "+v.last+" на значение "+v.now)
-					log.Println("ERROR!", err)
-					if errBack := tx.Rollback(); errBack != nil {
-						errBack = errors.Wrap(errBack, "Не удалось откатить транзакцию")
-						err := errors.Wrap(errBack, err.Error()+"\n")
-						log.Println("ERROR!", err)
-					}
-					return err
-				} else {
-					wf.lbModel.items[i].last = v.now
-				}
-			}
-		}
-	}
-	if err = tx.Commit(); err != nil {
-		err = errors.Wrap(err, "Не удалось завершить транзакцию")
-		log.Println("ERROR!", err)
-		return err
-	}
-	return nil
-}
-
-func TypeDialogRun(owner walk.Form, sTitle, tableName string, db *sql.DB) (int, error) {
-	log.Println("INFO -", "BEGIN window - TYPE, tableName -", tableName)
-
-	sHeading := "Внимание"
-	msgBoxIcon := walk.MsgBoxIconWarning
-	// var acceptPB, cancelPB *walk.PushButton
-	lbModel, err := newModelType(tableName, db)
-	if err != nil {
-		err = errors.Wrap(err, "При заполнении списка произошла ошибка")
-		log.Println("ERROR!", err)
-		return 0, err
-	}
-	wf := &windowsFormType{
-		lbModel: lbModel,
-	}
-	data.Reg.IsSaveDialog.SetSatisfied(false)
-	checkTitle := func(text string) bool {
-		if text == "" {
-			walk.MsgBox(wf, sHeading, "Название не должно состоять из пустой строки.", msgBoxIcon)
-			return false
-		}
-		if len(text) > 255 {
-			walk.MsgBox(wf, sHeading, "Длинна названия должна быть меньше 255.", msgBoxIcon)
-			return false
-		}
-		for i := range wf.lbModel.items {
-			if wf.lbModel.Value(i) == text {
-				walk.MsgBox(wf, sHeading, "Такое название уже существует.", msgBoxIcon)
-				return false
-			}
-		}
-		return true
-	}
-	checkIndex := func() bool {
-		if wf.lbWidget.CurrentIndex() < 0 {
-			walk.MsgBox(wf, sHeading, "Выберите строчку, которую хотите изменить.", msgBoxIcon)
-			return false
-		}
-		return true
-	}
-
+	log.Printf(data.S.InitWindow, data.S.Type)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
-		Title:    sTitle,
-		// DefaultButton: &acceptPB,
-		// CancelButton:  &cancelPB,
-		// MinSize: dec.Size{400, 250},
-		Layout: dec.VBox{MarginsZero: true},
+		Title:    data.S.HeadingType,
+		Layout:   dec.VBox{MarginsZero: true},
 		Children: []dec.Widget{
 			dec.HSplitter{
 				Children: []dec.Widget{
 					dec.Composite{
-						MinSize: dec.Size{150, 150},
-						Layout:  dec.VBox{},
+						Layout: dec.VBox{},
 						Children: []dec.Widget{
-							dec.ListBox{
-								AssignTo: &wf.lbWidget,
-								Model:    wf.lbModel,
+							dec.TableView{
+								AssignTo: &wf.tv,
+								Columns: []dec.TableViewColumn{
+									{Title: "Название"},
+								},
+								MinSize: dec.Size{120, 0},
+								Model:   wf.modelTable,
 							},
 						},
 					},
 					dec.Composite{
-						// MinSize: dec.Size{200, 50},
 						Layout: dec.VBox{},
 						Children: []dec.Widget{
 							dec.LineEdit{
-								AssignTo:  &wf.textToAddWidget,
-								MaxLength: 63,
+								AssignTo:  &wf.textW,
+								MaxLength: 255,
+								MinSize:   dec.Size{120, 0},
 							},
 							dec.PushButton{
-								Text: "Добавить",
+								Text: data.S.ButtonAdd,
 								OnClicked: func() {
-									log.Println("INFO -", "Add")
-									if text := wf.textToAddWidget.Text(); checkTitle(text) {
-										trackLatest := wf.lbWidget.ItemVisible(len(wf.lbModel.items)-1) && len(wf.lbWidget.SelectedIndexes()) <= 1
-										wf.lbModel.items = append(wf.lbModel.items, itemAdd_EntityType(wf.textToAddWidget.Text()))
-										index := len(wf.lbModel.items) - 1
-										wf.lbModel.PublishItemsInserted(index, index)
-										if trackLatest {
-											wf.lbWidget.EnsureItemVisible(len(wf.lbModel.items) - 1)
-										}
-										wf.textToAddWidget.SetText("")
-										data.Reg.IsSaveDialog.SetSatisfied(true)
+									log.Println(data.S.Info, data.S.LogAdd)
+									if err := wf.add(db, tableName); err != nil {
+										err = errors.Wrap(err, data.S.ErrorAdd)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 									}
-									log.Println("INFO -", wf.lbModel.items)
 								},
 							},
 							dec.PushButton{
-								Text: "Переименовать",
+								Text: data.S.ButtonChange,
 								OnClicked: func() {
-									log.Println("INFO -", "Update")
-									if !checkIndex() {
-										return
+									log.Println(data.S.Info, data.S.LogChange)
+									if err := wf.change(db, tableName); err != nil {
+										err = errors.Wrap(err, data.S.ErrorChange)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 									}
-									if text := wf.textToAddWidget.Text(); checkTitle(text) {
-										index := wf.lbWidget.CurrentIndex()
-										wf.lbModel.items[index].now = text
-										wf.lbModel.PublishItemChanged(index)
-										wf.textToAddWidget.SetText("")
-										data.Reg.IsSaveDialog.SetSatisfied(true)
-									}
-									log.Println("INFO -", wf.lbModel.items)
 								},
 							},
 							dec.PushButton{
-								Text: "Удалить",
+								Text: data.S.ButtonDelete,
 								OnClicked: func() {
-									log.Println("INFO -", "Delete")
-									if !checkIndex() {
-										return
+									log.Println(data.S.Info, data.S.LogDelete)
+									if err := wf.delete(db, tableName); err != nil {
+										err = errors.Wrap(err, data.S.ErrorDelete)
+										log.Println(data.S.Error, err)
+										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 									}
-									trackLatest := wf.lbWidget.ItemVisible(len(wf.lbModel.items)-1) && len(wf.lbWidget.SelectedIndexes()) <= 1
-									index := wf.lbWidget.CurrentIndex()
-									wf.lbModel.items = wf.lbModel.items[:index+copy(wf.lbModel.items[index:], wf.lbModel.items[index+1:])]
-									wf.lbModel.PublishItemsRemoved(index, index)
-									if l := len(wf.lbModel.items); l <= index {
-										index = l - 1
-									}
-									if index >= 0 {
-										wf.lbWidget.SetCurrentIndex(index)
-									}
-									if trackLatest {
-										wf.lbWidget.EnsureItemVisible(len(wf.lbModel.items) - 1)
-									}
-									data.Reg.IsSaveDialog.SetSatisfied(true)
-									log.Println("INFO -", wf.lbModel.items)
-								},
-							},
-							dec.Composite{
-								Layout: dec.HBox{},
-								Children: []dec.Widget{
-									dec.PushButton{
-										Text: "OK",
-										// AssignTo: &acceptPB,
-										Enabled: dec.Bind("!IsSaveDialog"),
-										OnClicked: func() {
-											log.Println("INFO -", "Ok")
-											wf.Accept()
-										},
-									},
-									dec.PushButton{
-										Text:    "Сохранить",
-										Enabled: dec.Bind("IsSaveDialog"),
-										OnClicked: func() {
-											log.Println("INFO -", "Save")
-											if err := wf.save(tableName, db); err != nil {
-												err = errors.Wrap(err, "In "+tableName+" не удалось сохранить данные.")
-												log.Println("ERROR!", err)
-												walk.MsgBox(wf, sHeading, err.Error(), walk.MsgBoxIconExclamation)
-											} else {
-												data.Reg.IsSaveDialog.SetSatisfied(false)
-											}
-											log.Println("INFO -", wf.lbModel.items)
-										},
-									},
-									dec.PushButton{
-										Text: "Отмена",
-										// AssignTo: &cancelPB,
-										Enabled: dec.Bind("IsSaveDialog"),
-										OnClicked: func() {
-											log.Println("INFO -", "Cancel")
-											wf.Cancel()
-										},
-									},
 								},
 							},
 						},
@@ -362,12 +153,92 @@ func TypeDialogRun(owner walk.Form, sTitle, tableName string, db *sql.DB) (int, 
 			},
 		},
 	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, "Could not create Window Form Type")
-		log.Println("ERROR!", err)
+		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Println("INFO -", "CREATE window - TYPE, tableName -", tableName)
-	log.Println("INFO -", wf.lbModel.items)
-	log.Println("INFO -", "RUN window - TYPE, tableName -", tableName)
+	log.Printf(data.S.CreateWindow, data.S.Type)
+
+	log.Printf(data.S.RunWindow, data.S.Type)
 	return wf.Run(), nil
+}
+
+func (wf windowsFormType) add(db *sql.DB, tableName string) error {
+	if wf.textW.Text() == "" {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgEmptyTitle, data.Icon.Info)
+		return nil
+	}
+	var row IdTitle
+	row.Title = wf.textW.Text()
+	QwStr := data.InsertType(tableName, row.Title)
+	if err := db.Ping(); err != nil {
+		return errors.Wrap(err, data.S.ErrorPingDB)
+	}
+	result, err := db.Exec(QwStr)
+	if err != nil {
+		return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+	}
+	if row.Id, err = result.LastInsertId(); err != nil {
+		log.Println(data.S.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
+		walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
+		row.Id = 0
+	}
+	wf.textW.SetText("")
+	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1)
+	wf.modelTable.items = append(wf.modelTable.items, &row)
+	index := len(wf.modelTable.items) - 1
+	wf.modelTable.PublishRowsReset()
+	wf.modelTable.PublishRowsInserted(index, index)
+	if trackLatest {
+		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
+	}
+	return nil
+}
+
+func (wf windowsFormType) change(db *sql.DB, tableName string) error {
+	if wf.textW.Text() == "" {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgEmptyTitle, data.Icon.Info)
+		return nil
+	}
+	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		return nil
+	}
+	index := wf.tv.CurrentIndex()
+	QwStr := data.UpdateType(tableName, wf.textW.Text(), wf.modelTable.items[index].Id)
+	if err := db.Ping(); err != nil {
+		return errors.Wrap(err, data.S.ErrorPingDB)
+	}
+	if _, err := db.Exec(QwStr); err != nil {
+		return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
+	}
+	wf.modelTable.items[index].Title = wf.textW.Text()
+	wf.textW.SetText("")
+	wf.modelTable.PublishRowsReset()
+	wf.modelTable.PublishRowChanged(index)
+	return nil
+}
+
+func (wf windowsFormType) delete(db *sql.DB, tableName string) error {
+	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
+		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		return nil
+	}
+	index := wf.tv.CurrentIndex()
+	id := wf.modelTable.items[index].Id
+	QwStr := data.DeleteType(tableName, id)
+	if err := db.Ping(); err != nil {
+		return errors.Wrap(err, data.S.ErrorPingDB)
+	}
+	if _, err := db.Exec(QwStr); err != nil {
+		return errors.Wrap(err, data.S.ErrorDeleteDB+QwStr)
+	}
+	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
+	wf.modelTable.items = wf.modelTable.items[:index+copy(wf.modelTable.items[index:], wf.modelTable.items[index+1:])]
+	wf.modelTable.PublishRowsReset()
+	wf.modelTable.PublishRowsRemoved(index, index)
+	if trackLatest {
+		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
+	}
+	wf.modelTable.PublishRowsChanged(index, wf.modelTable.RowCount()-1)
+	return nil
 }

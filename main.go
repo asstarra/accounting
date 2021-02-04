@@ -46,12 +46,6 @@ func main() {
 	defer f.Close()
 	log.SetOutput(f)
 
-	// err = syscall.Dup2(int(f.Fd()), int(os.Stderr.Fd()))
-	// if err != nil {
-	// 	log.Println("ERROR!", err)
-	// 	return
-	// }
-
 	log.Println("-------------------------------------------------------------")
 
 	err = data.Init()
@@ -78,6 +72,8 @@ func main() {
 	}
 
 	entity := window.Entity{}
+	children := make([]*window.EntityRecChild, 0)
+	entity.Children = &children
 	entityRec := window.EntityRecChild{}
 	idTitle := window.IdTitle{}
 
@@ -91,7 +87,7 @@ func main() {
 			dec.PushButton{
 				Text: "Type",
 				OnClicked: func() {
-					cmd, err := window.TypeDialogRun(mw, "Учет - Тип сущности", "EntityType", db)
+					cmd, err := window.TypeRunDialog(mw, db, "EntityType")
 					if err != nil {
 						log.Println("ERROR!", err)
 					}

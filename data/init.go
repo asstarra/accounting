@@ -76,6 +76,7 @@ var S struct {
 	MsgBoxInfo    string
 
 	BeginWindow  string
+	InitWindow   string
 	CreateWindow string
 	RunWindow    string
 	EndWindow    string
@@ -96,18 +97,25 @@ var S struct {
 	LogChange string
 	LogDelete string
 	LogChoose string
+	LogSearch string
 
 	ButtonOK     string
 	ButtonCansel string
 	ButtonAdd    string
 	ButtonChange string
 	ButtonDelete string
+	ButtonSearch string
 
-	InEntitiesRunDialog  string
-	InEntityRunDialog    string
-	InEntityRecRunDialog string
+	InEntitiesRunDialog    string
+	InEntityRunDialog      string
+	InEntityRecRunDialog   string
+	InTypeRunDialog        string
+	InSelectEntities       string
+	InSelectEntityRecChild string
+	InSelectIdTitle        string
 
-	MsgChooseRow string
+	MsgChooseRow  string
+	MsgEmptyTitle string
 
 	ErrorTableInit        string
 	ErrorTypeInit         string
@@ -130,6 +138,7 @@ var S struct {
 	ErrorInsertIndex      string
 	ErrorSubmit           string
 	ErrorChoose           string
+	ErrorSubquery         string
 }
 
 func initString() {
@@ -144,6 +153,7 @@ func initString() {
 	S.MsgBoxInfo = "Информация"
 
 	S.BeginWindow = "INFO: BEGIN window %s"
+	S.InitWindow = "INFO: INIT window %s"
 	S.CreateWindow = "INFO: CREATE window %s"
 	S.RunWindow = "INFO: RUN window %s"
 	S.EndWindow = "INFO: END window %s, cmd %v"
@@ -164,18 +174,25 @@ func initString() {
 	S.LogChange = "Change"
 	S.LogDelete = "Delete"
 	S.LogChoose = "Choose"
+	S.LogSearch = "Search"
 
 	S.ButtonOK = "OK"
 	S.ButtonCansel = "Отмена"
 	S.ButtonAdd = "Добавить"
 	S.ButtonChange = "Изменить"
 	S.ButtonDelete = "Удалить"
+	S.ButtonSearch = "Поиск"
 
 	S.InEntitiesRunDialog = "In EntitiesRunDialog(isChage = %t, IdTitle = %v)"
 	S.InEntityRunDialog = "In EntityRunDialog(entity = %v)"
 	S.InEntityRecRunDialog = "In EntityRecRunDialog(child = %v)"
+	S.InTypeRunDialog = "In TypeRunDialog(tableName = %s)"
+	S.InSelectEntities = "In SelectEntities(title = \"%s\", entityType = %d)"
+	S.InSelectEntityRecChild = "In SelectEntityRecChild(parent = %d)"
+	S.InSelectIdTitle = "In SelectIdTitle(tableName = %s)"
 
 	S.MsgChooseRow = "Выберите строчку"
+	S.MsgEmptyTitle = "Название не может состоять из пустой строки"
 
 	S.ErrorTableInit = "При заполнении таблицы произошла ошибка"
 	S.ErrorTypeInit = "Не удалось узнать список типов"
@@ -200,6 +217,7 @@ func initString() {
 		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке."
 	S.ErrorSubmit = "Не удалось сохранить данные"
 	S.ErrorChoose = "Не удалось выбрать данные"
+	S.ErrorSubquery = "Не удалось сделать подзапрос"
 }
 
 func initFromFile(filename string, data interface{}) error {

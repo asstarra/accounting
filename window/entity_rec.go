@@ -19,7 +19,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 	log.Printf(data.S.BeginWindow, data.S.EntityRec)
 	var databind *walk.DataBinder
 	wf := windowsFormEntityRec{}
-
+	log.Printf(data.S.InitWindow, data.S.EntityRec)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingEntityRec,

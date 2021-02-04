@@ -3,7 +3,6 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/lxn/walk"
@@ -35,7 +34,7 @@ func SelectEntities(db *sql.DB, title string, entityType int64) ([]*Entity, erro
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrap(err, fmt.Sprintf("In SelectEntities(title = \"%s\", entityType = %d)", title, entityType))
+		return arr, errors.Wrapf(err, data.S.InSelectEntities, title, entityType)
 	}
 	return arr, nil
 }
@@ -66,6 +65,7 @@ func newWindowsFormEntities(db *sql.DB) (*windowsFormEntities, error) {
 		err = errors.Wrap(err, data.S.ErrorTypeInit)
 		return nil, err
 	}
+	wf.modelType = append([]*IdTitle{new(IdTitle)}, wf.modelType...)
 	return wf, nil
 }
 
@@ -102,19 +102,72 @@ func (m *modelEntitiesComponent) Value(row, col int) interface{} {
 func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTitle) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.Entities)
 	var err error
+	var databind *walk.DataBinder
+	search := new(IdTitle)
 	wf, err := newWindowsFormEntities(db)
 	if err != nil {
 		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
-
+	log.Printf(data.S.InitWindow, data.S.Entities)
 	if err = (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingEntities,
+		DataBinder: dec.DataBinder{
+			AssignTo:       &databind,
+			Name:           "search",
+			DataSource:     search,
+			ErrorPresenter: dec.ToolTipErrorPresenter{},
+		},
 		// Size:     dec.Size{100, 100},
 		Layout:  dec.VBox{},
 		MinSize: dec.Size{450, 0},
 		Children: []dec.Widget{
-			// GO-TO // Добавить кнопки для сортировки
+			dec.Composite{
+				Layout: dec.HBox{},
+				Children: []dec.Widget{
+					dec.Label{
+						Text: "Название:",
+					},
+					dec.LineEdit{
+						Text: dec.Bind("Title"),
+					},
+
+					dec.Label{
+						Text: "Тип:",
+					},
+					dec.ComboBox{
+						Value:         dec.Bind("Id", dec.SelRequired{}),
+						BindingMember: "Id",
+						DisplayMember: "Title",
+						Model:         wf.modelType,
+					},
+
+					dec.PushButton{
+						Text: data.S.ButtonSearch,
+						OnClicked: func() {
+							log.Println(data.S.Info, data.S.LogSearch)
+							if err := databind.Submit(); err != nil {
+								err = errors.Wrap(err, data.S.ErrorSubmit)
+								log.Println(data.S.Error, err)
+								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								return
+							}
+							lastLen := wf.modelTable.RowCount()
+							if wf.modelTable.items, err = SelectEntities(db, search.Title, search.Id); err != nil {
+								err = errors.Wrap(err, data.S.ErrorSubquery)
+								log.Println(data.S.Error, err)
+								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								return
+							}
+							nowLen := wf.modelTable.RowCount()
+							wf.modelTable.PublishRowsReset()
+							wf.modelTable.PublishRowsRemoved(0, lastLen)
+							wf.modelTable.PublishRowsInserted(0, nowLen)
+							wf.modelTable.PublishRowsChanged(0, nowLen)
+						},
+					},
+				},
+			},
 			dec.TableView{
 				AssignTo: &wf.tv,
 				Columns: []dec.TableViewColumn{
@@ -227,29 +280,26 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
 	wf.modelTable.items = append(wf.modelTable.items, &entity)
 	index := len(wf.modelTable.items) - 1
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowsInserted(index, index)
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
 	}
-	fmt.Println(10)
 	id, err := result.LastInsertId()
 	if err != nil {
 		log.Println(data.S.Error, data.S.ErrorInsertIndexLog)
 		walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
 		return nil
 	}
-	fmt.Println(12)
 	wf.modelTable.items[index].Id = id
 	for _, v := range *entity.Children {
 		QwStrChild := data.InsertEntityRec(id, v.Id, v.Count)
-		fmt.Println(13, QwStrChild)
 		if _, err := db.Exec(QwStrChild); err != nil {
 			err = errors.Wrap(err, data.S.ErrorAddDB+QwStrChild)
 			log.Println(data.S.Error, err)
 			walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
 		}
 	}
-	fmt.Println(14)
 	return nil
 }
 
@@ -263,12 +313,12 @@ func (wf windowsFormEntities) change(db *sql.DB) error {
 	entity := wf.modelTable.items[index]
 	children, err := SelectEntityRecChild(db, entity.Id)
 	if err != nil {
-		return err // GO-TO подробно расписать ошибку.
+		return errors.Wrap(err, data.S.ErrorSubquery)
 	}
 	entity.Children = &children
 	cmd, err := EntityRunDialog(wf, db, entity)
 	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
-	fmt.Printf(data.S.InEntityRunDialog, *entity)
+
 	if err != nil {
 		return errors.Wrapf(err, data.S.InEntityRunDialog, *entity)
 	}
@@ -284,6 +334,7 @@ func (wf windowsFormEntities) change(db *sql.DB) error {
 		return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
 	}
 	wf.modelTable.items[index] = entity
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowChanged(index)
 	return nil
 }
@@ -294,7 +345,6 @@ func (wf windowsFormEntities) delete(db *sql.DB) error {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
-	log.Println(data.S.Debug, index, *wf.modelTable.items[index])
 	id := wf.modelTable.items[index].Id
 	QwStr := data.DeleteEntity(id)
 	if err := db.Ping(); err != nil {
@@ -307,6 +357,7 @@ func (wf windowsFormEntities) delete(db *sql.DB) error {
 
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
 	wf.modelTable.items = wf.modelTable.items[:index+copy(wf.modelTable.items[index:], wf.modelTable.items[index+1:])]
+	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowsRemoved(index, index)
 	if trackLatest {
 		wf.tv.EnsureItemVisible(len(wf.modelTable.items) - 1)
