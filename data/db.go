@@ -36,39 +36,39 @@ func SelectEntity(title string, entityType int64) string {
 	sTitle := table.Columns["Title"].Name
 	sType := table.Columns["Type"].Name
 	sSpec := table.Columns["Specification"].Name
-	sProdLine := table.Columns["ProductionLine"].Name
+	sMarking := table.Columns["Marking"].Name
 	sNote := table.Columns["Note"].Name
-	s := fmt.Sprintf("SELECT %s AS id, %s AS title, %s AS type, %s AS spec, %s AS pline, %s AS note FROM %s WHERE %s LIKE '%%%s%%'",
-		sId, sTitle, sType, sSpec, sProdLine, sNote, table.Name, sTitle, title)
+	s := fmt.Sprintf("SELECT %s AS id, %s AS title, %s AS type, %s AS spec, %s AS mark, %s AS note FROM %s WHERE %s LIKE '%%%s%%'",
+		sId, sTitle, sType, sSpec, sMarking, sNote, table.Name, sTitle, title)
 	if entityType != 0 {
 		s += fmt.Sprintf(" AND %s = %d", sType, entityType)
 	}
 	return s
 }
 
-func InsertEntity(vTitle, vSpec, vNote string, vProdL bool, vType int64) string {
+func InsertEntity(vTitle, vSpec, vNote string, vMarking int8, vType int64) string {
 	table := Tab["Entity"]
 	sTitle := table.Columns["Title"].Name
 	sType := table.Columns["Type"].Name
 	sSpec := table.Columns["Specification"].Name
-	sProdLine := table.Columns["ProductionLine"].Name
+	sMarking := table.Columns["Marking"].Name
 	sNote := table.Columns["Note"].Name
-	return fmt.Sprintf("INSERT %s (%s, %s, %s, %s, %s) VALUES ('%s', %d, '%s', %t, '%s')",
-		table.Name, sTitle, sType, sSpec, sProdLine, sNote,
-		vTitle, vType, vSpec, vProdL, vNote)
+	return fmt.Sprintf("INSERT %s (%s, %s, %s, %s, %s) VALUES ('%s', %d, '%s', %d, '%s')",
+		table.Name, sTitle, sType, sSpec, sMarking, sNote,
+		vTitle, vType, vSpec, vMarking, vNote)
 }
 
-func UpdateEntity(vTitle, vSpec, vNote string, vProdL bool, vType, vId int64) string {
+func UpdateEntity(vTitle, vSpec, vNote string, vMarking int8, vType, vId int64) string {
 	table := Tab["Entity"]
 	sId := table.Columns["Id"].Name
 	sTitle := table.Columns["Title"].Name
 	sType := table.Columns["Type"].Name
 	sSpec := table.Columns["Specification"].Name
-	sProdLine := table.Columns["ProductionLine"].Name
+	sMarking := table.Columns["Marking"].Name
 	sNote := table.Columns["Note"].Name
-	return fmt.Sprintf("UPDATE %s SET %s = '%s', %s = %d, %s = '%s', %s = %t, %s = '%s' WHERE %s = %d",
+	return fmt.Sprintf("UPDATE %s SET %s = '%s', %s = %d, %s = '%s', %s = %d, %s = '%s' WHERE %s = %d",
 		table.Name, sTitle, vTitle, sType, vType, sSpec, vSpec,
-		sProdLine, vProdL, sNote, vNote, sId, vId)
+		sMarking, vMarking, sNote, vNote, sId, vId)
 }
 
 func DeleteEntity(id int64) string {

@@ -22,14 +22,22 @@ func (a EntityRecChild) String() string {
 	return fmt.Sprintf("{Id = %d, Title = %s, Count = %d}", a.Id, a.Title, a.Count)
 }
 
+type Marking int8
+
+const (
+	MarkingNo Marking = 1 + iota
+	MarkingAll
+	MarkingYear
+)
+
 type Entity struct {
-	Id             int64
-	Title          string
-	Type           int64
-	Specification  string
-	ProductionLine bool
-	Note           string
-	Children       *[]*EntityRecChild
+	Id            int64
+	Title         string
+	Type          int64
+	Specification string
+	Marking       Marking // GO-TO маркировка
+	Note          string
+	Children      *[]*EntityRecChild
 }
 
 func (a Entity) String() string {
@@ -39,6 +47,6 @@ func (a Entity) String() string {
 	} else {
 		c = fmt.Sprint(*a.Children)
 	}
-	return fmt.Sprintf("{Id = %d, Title = %s, Type = %d, Specification = %s, ProductionLine = %t, Note = %s, Children = %s}",
-		a.Id, a.Title, a.Type, a.Specification, a.ProductionLine, a.Note, c)
+	return fmt.Sprintf("{Id = %d, Title = %s, Type = %d, Specification = %s, Marking = %t, Note = %s, Children = %s}",
+		a.Id, a.Title, a.Type, a.Specification, a.Marking, a.Note, c)
 }

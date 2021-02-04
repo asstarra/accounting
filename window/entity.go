@@ -112,7 +112,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Text: "Название:",
 							},
 							dec.LineEdit{
-								MinSize: dec.Size{150, 0},
+								MinSize: dec.Size{170, 0},
 								Text:    dec.Bind("Title"),
 							},
 
@@ -133,11 +133,16 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Text: dec.Bind("Specification"),
 							},
 
-							dec.Label{
-								Text: "Маркировка:",
-							},
-							dec.CheckBox{
-								Checked: dec.Bind("ProductionLine"),
+							dec.RadioButtonGroupBox{
+								ColumnSpan: 2,
+								Title:      "Маркировка:",
+								Layout:     dec.HBox{},
+								DataMember: "Marking",
+								Buttons: []dec.RadioButton{
+									{Text: "Нет", Value: MarkingNo},
+									{Text: "Сквозная", Value: MarkingAll},
+									{Text: "По годам", Value: MarkingYear},
+								},
 							},
 
 							dec.Label{

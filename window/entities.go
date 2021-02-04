@@ -25,7 +25,7 @@ func SelectEntities(db *sql.DB, title string, entityType int64) ([]*Entity, erro
 		defer rows.Close()
 		for rows.Next() {
 			row := Entity{}
-			err := rows.Scan(&row.Id, &row.Title, &row.Type, &row.Specification, &row.ProductionLine, &row.Note)
+			err := rows.Scan(&row.Id, &row.Title, &row.Type, &row.Specification, &row.Marking, &row.Note)
 			if err != nil {
 				err = errors.Wrap(err, data.S.ErrorDecryptRow)
 				return err
@@ -267,7 +267,7 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
-	QwStr := data.InsertEntity(entity.Title, entity.Specification, entity.Note, entity.ProductionLine, entity.Type)
+	QwStr := data.InsertEntity(entity.Title, entity.Specification, entity.Note, int8(entity.Marking), entity.Type)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
@@ -325,7 +325,7 @@ func (wf windowsFormEntities) change(db *sql.DB) error {
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
-	QwStr := data.UpdateEntity(entity.Title, entity.Specification, entity.Note, entity.ProductionLine, entity.Type, entity.Id)
+	QwStr := data.UpdateEntity(entity.Title, entity.Specification, entity.Note, int8(entity.Marking), entity.Type, entity.Id)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
