@@ -35,7 +35,7 @@ type Column struct {
 var Reg Register
 
 type Register struct {
-	IsSaveDialog *walk.MutableCondition
+	IsSaveDialog *walk.MutableCondition // GO-TO
 }
 
 func (r Register) String() string {
@@ -50,21 +50,19 @@ func initRegister() {
 	dec.MustRegisterCondition("IsSaveDialog", Reg.IsSaveDialog)
 }
 
-var Icon struct {
+var Icon = struct {
 	Critical walk.MsgBoxStyle
 	Error    walk.MsgBoxStyle
 	Warning  walk.MsgBoxStyle
 	Info     walk.MsgBoxStyle
+}{
+	Critical: walk.MsgBoxIconError,
+	Error:    walk.MsgBoxIconError,
+	Warning:  walk.MsgBoxIconWarning,
+	Info:     walk.MsgBoxIconInformation,
 }
 
-func initIcon() {
-	Icon.Critical = walk.MsgBoxIconError
-	Icon.Error = walk.MsgBoxIconError
-	Icon.Warning = walk.MsgBoxIconWarning
-	Icon.Info = walk.MsgBoxIconInformation
-}
-
-var S struct {
+var S = struct {
 	Panic   string
 	Error   string
 	Warning string
@@ -139,85 +137,83 @@ var S struct {
 	ErrorSubmit           string
 	ErrorChoose           string
 	ErrorSubquery         string
-}
+}{
+	Panic:   "PANIC!",
+	Error:   "ERROR!",
+	Warning: "WARNING!",
+	Info:    "INFO:",
+	Debug:   "DEBUG:",
 
-func initString() {
-	S.Panic = "PANIC!"
-	S.Error = "ERROR!"
-	S.Warning = "WARNING!"
-	S.Info = "INFO:"
-	S.Debug = "DEBUG:"
+	MsgBoxError:   "Ошибка!",
+	MsgBoxWarning: "Внимание!",
+	MsgBoxInfo:    "Информация",
 
-	S.MsgBoxError = "Ошибка!"
-	S.MsgBoxWarning = "Внимание!"
-	S.MsgBoxInfo = "Информация"
+	BeginWindow:  "INFO: BEGIN window %s",
+	InitWindow:   "INFO: INIT window %s",
+	CreateWindow: "INFO: CREATE window %s",
+	RunWindow:    "INFO: RUN window %s",
+	EndWindow:    "INFO: END window %s, cmd %v",
 
-	S.BeginWindow = "INFO: BEGIN window %s"
-	S.InitWindow = "INFO: INIT window %s"
-	S.CreateWindow = "INFO: CREATE window %s"
-	S.RunWindow = "INFO: RUN window %s"
-	S.EndWindow = "INFO: END window %s, cmd %v"
+	Entity:    "ENTITY",
+	Entities:  "ENTITIES",
+	EntityRec: "ENTITY_REC",
+	Type:      "TYPE",
 
-	S.Entity = "ENTITY"
-	S.Entities = "ENTITIES"
-	S.EntityRec = "ENTITY_REC"
-	S.Type = "TYPE"
+	HeadingEntity:    "Учет - Сущность",
+	HeadingEntities:  "Учет - Сущности",
+	HeadingEntityRec: "Учет - Дочерний компонент",
+	HeadingType:      "Учет - Типы",
 
-	S.HeadingEntity = "Учет - Сущность"
-	S.HeadingEntities = "Учет - Сущности"
-	S.HeadingEntityRec = "Учет - Дочерний компонент"
-	S.HeadingType = "Учет - Типы"
+	LogOk:     "Ok",
+	LogCansel: "Cansel",
+	LogAdd:    "Add",
+	LogChange: "Change",
+	LogDelete: "Delete",
+	LogChoose: "Choose",
+	LogSearch: "Search",
 
-	S.LogOk = "Ok"
-	S.LogCansel = "Cansel"
-	S.LogAdd = "Add"
-	S.LogChange = "Change"
-	S.LogDelete = "Delete"
-	S.LogChoose = "Choose"
-	S.LogSearch = "Search"
+	ButtonOK:     "OK",
+	ButtonCansel: "Отмена",
+	ButtonAdd:    "Добавить",
+	ButtonChange: "Изменить",
+	ButtonDelete: "Удалить",
+	ButtonSearch: "Поиск",
 
-	S.ButtonOK = "OK"
-	S.ButtonCansel = "Отмена"
-	S.ButtonAdd = "Добавить"
-	S.ButtonChange = "Изменить"
-	S.ButtonDelete = "Удалить"
-	S.ButtonSearch = "Поиск"
+	InEntitiesRunDialog:    "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
+	InEntityRunDialog:      "In EntityRunDialog(entity = %v)",
+	InEntityRecRunDialog:   "In EntityRecRunDialog(child = %v)",
+	InTypeRunDialog:        "In TypeRunDialog(tableName = %s)",
+	InSelectEntities:       "In SelectEntities(title = \"%s\", entityType = %d)",
+	InSelectEntityRecChild: "In SelectEntityRecChild(parent = %d)",
+	InSelectIdTitle:        "In SelectIdTitle(tableName = %s)",
 
-	S.InEntitiesRunDialog = "In EntitiesRunDialog(isChage = %t, IdTitle = %v)"
-	S.InEntityRunDialog = "In EntityRunDialog(entity = %v)"
-	S.InEntityRecRunDialog = "In EntityRecRunDialog(child = %v)"
-	S.InTypeRunDialog = "In TypeRunDialog(tableName = %s)"
-	S.InSelectEntities = "In SelectEntities(title = \"%s\", entityType = %d)"
-	S.InSelectEntityRecChild = "In SelectEntityRecChild(parent = %d)"
-	S.InSelectIdTitle = "In SelectIdTitle(tableName = %s)"
+	MsgChooseRow:  "Выберите строчку",
+	MsgEmptyTitle: "Название не может состоять из пустой строки",
 
-	S.MsgChooseRow = "Выберите строчку"
-	S.MsgEmptyTitle = "Название не может состоять из пустой строки"
-
-	S.ErrorTableInit = "При заполнении таблицы произошла ошибка"
-	S.ErrorTypeInit = "Не удалось узнать список типов"
-	S.ErrorCreateWindow = "Could not create Window Form"
-	S.ErrorUnexpectedColumn = "Unexpected column"
-	S.ErrorOpenFile = "Не удалось открыть файл "
-	S.ErrorReadFile = "Ошибка чтения данных в файле "
-	S.ErrorInit = "Ошибка инициализации"
-	S.ErrorOpedDB = "Не удалось открыть соединение к базе данных"
-	S.ErrorPingDB = "Не удалось подключится к базе данных"
-	S.ErrorQuery = "Ошибка запроса к базе данных. Строка запроса = "
-	S.ErrorDecryptRow = "Не удалось расшифровать строку"
-	S.ErrorAdd = "Не удалось добавить строку"
-	S.ErrorChange = "Не удалось изменить строку"
-	S.ErrorDelete = "Не удалось удалить строку"
-	S.ErrorAddDB = "Не удалось добавить строку в базу данных. Строка запроса = "
-	S.ErrorChangeDB = "Не удалось изменить строку в базе данных. Строка запроса = "
-	S.ErrorDeleteDB = "Не удалось удалить строку из базы данных. Строка запроса = "
-	S.ErrorInsertIndexLog = "При вставке новой строки в базу данных не удалось узнать индекс вставляемой строки"
-	S.ErrorInsertIndex = "Это сообщение не должно показываться.\n" +
+	ErrorTableInit:        "При заполнении таблицы произошла ошибка",
+	ErrorTypeInit:         "Не удалось узнать список типов",
+	ErrorCreateWindow:     "Could not create Window Form",
+	ErrorUnexpectedColumn: "Unexpected column",
+	ErrorOpenFile:         "Не удалось открыть файл ",
+	ErrorReadFile:         "Ошибка чтения данных в файле ",
+	ErrorInit:             "Ошибка инициализации",
+	ErrorOpedDB:           "Не удалось открыть соединение к базе данных",
+	ErrorPingDB:           "Не удалось подключится к базе данных",
+	ErrorQuery:            "Ошибка запроса к базе данных. Строка запроса = ",
+	ErrorDecryptRow:       "Не удалось расшифровать строку",
+	ErrorAdd:              "Не удалось добавить строку",
+	ErrorChange:           "Не удалось изменить строку",
+	ErrorDelete:           "Не удалось удалить строку",
+	ErrorAddDB:            "Не удалось добавить строку в базу данных. Строка запроса = ",
+	ErrorChangeDB:         "Не удалось изменить строку в базе данных. Строка запроса = ",
+	ErrorDeleteDB:         "Не удалось удалить строку из базы данных. Строка запроса = ",
+	ErrorInsertIndexLog:   "При вставке новой строки в базу данных не удалось узнать индекс вставляемой строки",
+	ErrorInsertIndex: "Это сообщение не должно показываться.\n" +
 		"При вставке новой строки в базу данных не удалось узнать индекс  вставляемой строки.\n" +
-		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке."
-	S.ErrorSubmit = "Не удалось сохранить данные"
-	S.ErrorChoose = "Не удалось выбрать данные"
-	S.ErrorSubquery = "Не удалось сделать подзапрос"
+		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке.",
+	ErrorSubmit:   "Не удалось сохранить данные",
+	ErrorChoose:   "Не удалось выбрать данные",
+	ErrorSubquery: "Не удалось сделать подзапрос",
 }
 
 func initFromFile(filename string, data interface{}) error {
@@ -236,9 +232,6 @@ func initFromFile(filename string, data interface{}) error {
 }
 
 func Init() error {
-	initString()
-	initIcon()
-	log.Println(S.Debug, "InitString")
 	err := initFromFile("config/database.json", &DB)
 	if err != nil {
 		return err

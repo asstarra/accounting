@@ -21,7 +21,7 @@ import (
 
 func errorWindow(s string) {
 	if _, err := (dec.MainWindow{
-		Title:  "КРИТИЧЕСКАЯ ОШИБКА!",
+		Title:  data.S.MsgBoxError,
 		Size:   dec.Size{300, 80},
 		Layout: dec.VBox{},
 		Children: []dec.Widget{
@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorOpenFile+"logfile.txt")
 		errorWindow(sErr + err.Error())
-		log.Println("ERROR!", err)
+		log.Println(data.S.Error, err)
 		return
 	}
 	defer f.Close()
