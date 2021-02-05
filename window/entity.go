@@ -139,9 +139,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Layout:     dec.HBox{},
 								DataMember: "Marking",
 								Buttons: []dec.RadioButton{
-									{Text: "Нет", Value: MarkingNo},
-									{Text: "Сквозная", Value: MarkingAll},
-									{Text: "По годам", Value: MarkingYear},
+									{Text: MarkingTitle[MarkingNo], Value: MarkingNo},
+									{Text: MarkingTitle[MarkingAll], Value: MarkingAll},
+									{Text: MarkingTitle[MarkingYear], Value: MarkingYear},
 								},
 							},
 

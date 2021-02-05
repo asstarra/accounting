@@ -93,7 +93,7 @@ func (m *modelEntitiesComponent) Value(row, col int) interface{} {
 	case 2:
 		return item.Specification
 	case 3:
-		return item.Marking //GO-TO
+		return MarkingTitle[item.Marking]
 	case 4:
 		return item.Note
 	}
@@ -121,7 +121,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 			ErrorPresenter: dec.ToolTipErrorPresenter{},
 		},
 		Layout:  dec.VBox{},
-		MinSize: dec.Size{450, 0},
+		MinSize: dec.Size{550, 0},
 		Children: []dec.Widget{
 			dec.Composite{
 				Layout: dec.HBox{},
@@ -132,6 +132,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 					dec.LineEdit{
 						Text: dec.Bind("Title"),
 					},
+					dec.HSpacer{Size: 20},
 
 					dec.Label{
 						Text: "Тип:",
@@ -140,8 +141,10 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 						Value:         dec.Bind("Id", dec.SelRequired{}),
 						BindingMember: "Id",
 						DisplayMember: "Title",
+						MinSize:       dec.Size{120, 0},
 						Model:         wf.modelType,
 					},
+					dec.HSpacer{Size: 20},
 
 					dec.PushButton{
 						Text: data.S.ButtonSearch,

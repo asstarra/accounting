@@ -30,12 +30,18 @@ const (
 	MarkingYear
 )
 
+var MarkingTitle = map[Marking]string{
+	MarkingNo:   "Нет",
+	MarkingAll:  "Сквозная",
+	MarkingYear: "По годам",
+}
+
 type Entity struct {
 	Id            int64
 	Title         string
 	Type          int64
 	Specification string
-	Marking       Marking // GO-TO маркировка
+	Marking       Marking
 	Note          string
 	Children      *[]*EntityRecChild
 }
