@@ -93,6 +93,8 @@ func (m *modelEntitiesComponent) Value(row, col int) interface{} {
 	case 2:
 		return item.Specification
 	case 3:
+		return item.Marking //GO-TO
+	case 4:
 		return item.Note
 	}
 	log.Println(data.S.Panic, data.S.ErrorUnexpectedColumn)
@@ -118,7 +120,6 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 			DataSource:     search,
 			ErrorPresenter: dec.ToolTipErrorPresenter{},
 		},
-		// Size:     dec.Size{100, 100},
 		Layout:  dec.VBox{},
 		MinSize: dec.Size{450, 0},
 		Children: []dec.Widget{
@@ -174,6 +175,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 					{Title: "Тип"},
 					{Title: "Название"},
 					{Title: "Спецификация"},
+					{Title: "Маркировка"},
 					{Title: "Примичание"},
 				},
 				MinSize: dec.Size{0, 200},
