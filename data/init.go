@@ -104,39 +104,47 @@ var S = struct {
 	ButtonDelete string
 	ButtonSearch string
 
-	InEntitiesRunDialog    string
-	InEntityRunDialog      string
-	InEntityRecRunDialog   string
-	InTypeRunDialog        string
-	InSelectEntities       string
-	InSelectEntityRecChild string
-	InSelectIdTitle        string
+	InEntitiesRunDialog       string
+	InEntityRunDialog         string
+	InEntityRecRunDialog      string
+	InTypeRunDialog           string
+	InSelectEntities          string
+	InSelectEntityRecChild    string
+	InSelectEntityRec         string
+	InSelectIdTitle           string
+	InSelectMarkingLine       string
+	InSelectMarkingLineEntity string
 
 	MsgChooseRow  string
 	MsgEmptyTitle string
 
-	ErrorTableInit        string
-	ErrorTypeInit         string
-	ErrorCreateWindow     string
-	ErrorUnexpectedColumn string
-	ErrorOpenFile         string
-	ErrorReadFile         string
-	ErrorInit             string
-	ErrorOpedDB           string
-	ErrorPingDB           string
-	ErrorQuery            string
-	ErrorDecryptRow       string
-	ErrorAdd              string
-	ErrorChange           string
-	ErrorDelete           string
-	ErrorAddDB            string
-	ErrorChangeDB         string
-	ErrorDeleteDB         string
-	ErrorInsertIndexLog   string
-	ErrorInsertIndex      string
-	ErrorSubmit           string
-	ErrorChoose           string
-	ErrorSubquery         string
+	ErrorTableInit         string
+	ErrorTypeInit          string
+	ErrorCreateWindow      string
+	ErrorCreateWindowErr   string
+	ErrorUnexpectedColumn  string
+	ErrorOpenFile          string
+	ErrorReadFile          string
+	ErrorInit              string
+	ErrorOpedDB            string
+	ErrorPingDB            string
+	ErrorQueryDB           string
+	ErrorAddDB             string
+	ErrorChangeDB          string
+	ErrorDeleteDB          string
+	ErrorDecryptRow        string
+	ErrorAddRow            string
+	ErrorChangeRow         string
+	ErrorDeleteRow         string
+	ErrorInsertIndexLog    string
+	ErrorInsertIndex       string
+	ErrorSubmit            string
+	ErrorChoose            string
+	ErrorRead              string
+	ErrorUpdate            string
+	ErrorSubquery          string
+	ErrorGraphCircle       string
+	ErrorUpdateMarkingLine string
 }{
 	Panic:   "PANIC!",
 	Error:   "ERROR!",
@@ -179,54 +187,60 @@ var S = struct {
 	ButtonDelete: "Удалить",
 	ButtonSearch: "Поиск",
 
-	InEntitiesRunDialog:    "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
-	InEntityRunDialog:      "In EntityRunDialog(entity = %v)",
-	InEntityRecRunDialog:   "In EntityRecRunDialog(child = %v)",
-	InTypeRunDialog:        "In TypeRunDialog(tableName = %s)",
-	InSelectEntities:       "In SelectEntities(title = \"%s\", entityType = %d)",
-	InSelectEntityRecChild: "In SelectEntityRecChild(parent = %d)",
-	InSelectIdTitle:        "In SelectIdTitle(tableName = %s)",
+	InEntitiesRunDialog:       "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
+	InEntityRunDialog:         "In EntityRunDialog(entity = %v)",
+	InEntityRecRunDialog:      "In EntityRecRunDialog(child = %v)",
+	InTypeRunDialog:           "In TypeRunDialog(tableName = %s)",
+	InSelectEntities:          "In SelectEntities(title = \"%s\", entityType = %d)",
+	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
+	InSelectEntityRec:         "In SelectEntityRec()",
+	InSelectIdTitle:           "In SelectIdTitle(tableName = %s)",
+	InSelectMarkingLine:       "In SelectMarkingLine()",
+	InSelectMarkingLineEntity: "In SelectMarkingLineEntity(id = %d)",
 
 	MsgChooseRow:  "Выберите строчку",
 	MsgEmptyTitle: "Название не может состоять из пустой строки",
 
 	ErrorTableInit:        "При заполнении таблицы произошла ошибка",
 	ErrorTypeInit:         "Не удалось узнать список типов",
-	ErrorCreateWindow:     "Could not create Window Form",
-	ErrorUnexpectedColumn: "Unexpected column",
+	ErrorCreateWindow:     "Не удалось создать окно",
+	ErrorCreateWindowErr:  "Не удалось создать окно для ошибки. Текст ошибки = ",
+	ErrorUnexpectedColumn: "Обращение к неизвестному столбцу",
 	ErrorOpenFile:         "Не удалось открыть файл ",
-	ErrorReadFile:         "Ошибка чтения данных в файле ",
+	ErrorReadFile:         "Не корректные данные в файле ",
 	ErrorInit:             "Ошибка инициализации",
 	ErrorOpedDB:           "Не удалось открыть соединение к базе данных",
 	ErrorPingDB:           "Не удалось подключится к базе данных",
-	ErrorQuery:            "Ошибка запроса к базе данных. Строка запроса = ",
+	ErrorQueryDB:          "Ошибка запроса к базе данных.\nСтрока запроса = ",
+	ErrorAddDB:            "Не удалось добавить строку в базу данных.\nСтрока запроса = ",
+	ErrorChangeDB:         "Не удалось изменить строку в базе данных.\nСтрока запроса = ",
+	ErrorDeleteDB:         "Не удалось удалить строку из базы данных.\nСтрока запроса = ",
 	ErrorDecryptRow:       "Не удалось расшифровать строку",
-	ErrorAdd:              "Не удалось добавить строку",
-	ErrorChange:           "Не удалось изменить строку",
-	ErrorDelete:           "Не удалось удалить строку",
-	ErrorAddDB:            "Не удалось добавить строку в базу данных. Строка запроса = ",
-	ErrorChangeDB:         "Не удалось изменить строку в базе данных. Строка запроса = ",
-	ErrorDeleteDB:         "Не удалось удалить строку из базы данных. Строка запроса = ",
+	ErrorAddRow:           "Не удалось добавить строку",
+	ErrorChangeRow:        "Не удалось изменить строку",
+	ErrorDeleteRow:        "Не удалось удалить строку",
 	ErrorInsertIndexLog:   "При вставке новой строки в базу данных не удалось узнать индекс вставляемой строки",
 	ErrorInsertIndex: "Это сообщение не должно показываться.\n" +
 		"При вставке новой строки в базу данных не удалось узнать индекс  вставляемой строки.\n" +
 		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке.",
-	ErrorSubmit:   "Не удалось сохранить данные",
-	ErrorChoose:   "Не удалось выбрать данные",
-	ErrorSubquery: "Не удалось сделать подзапрос",
+	ErrorSubmit:            "Не удалось разместить данные",
+	ErrorChoose:            "Не удалось выбрать данные",
+	ErrorRead:              "Не удалось считать данные",
+	ErrorUpdate:            "Не удалось обновить данные",
+	ErrorSubquery:          "Не удалось сделать подзапрос",
+	ErrorGraphCircle:       "Иерархия не может быть циклической",
+	ErrorUpdateMarkingLine: "При обновлении иерархии производственных линий произошла ошибка",
 }
 
 func initFromFile(filename string, data interface{}) error {
 	configFile, err := os.Open(filename)
 	if err != nil {
-		err = errors.Wrap(err, S.ErrorOpenFile+filename)
-		return err
+		return errors.Wrap(err, S.ErrorOpenFile+filename)
 	}
 	jsonParser := json.NewDecoder(configFile)
 	err = jsonParser.Decode(data)
 	if err != nil {
-		err = errors.Wrap(err, S.ErrorReadFile+filename)
-		return err
+		return errors.Wrap(err, S.ErrorReadFile+filename)
 	}
 	return nil
 }

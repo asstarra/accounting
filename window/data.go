@@ -2,6 +2,7 @@ package window
 
 import (
 	"fmt"
+	"strings"
 )
 
 type IdTitle struct {
@@ -10,7 +11,7 @@ type IdTitle struct {
 }
 
 func (a IdTitle) String() string {
-	return fmt.Sprintf("{Id = %d, Title = %s}", a.Id, a.Title)
+	return fmt.Sprintf("{Id = %d, Title = '%s'}", a.Id, a.Title)
 }
 
 type EntityRecChild struct {
@@ -19,7 +20,8 @@ type EntityRecChild struct {
 }
 
 func (a EntityRecChild) String() string {
-	return fmt.Sprintf("{Id = %d, Title = %s, Count = %d}", a.Id, a.Title, a.Count)
+	return fmt.Sprintf("'%s'", a.Title)
+	// return fmt.Sprintf("{Id = %d, Title = '%s', Count = %d}", a.Id, a.Title, a.Count)
 }
 
 type Marking int8
@@ -43,16 +45,36 @@ type Entity struct {
 	Specification string
 	Marking       Marking
 	Note          string
-	Children      *[]*EntityRecChild
+	Children      []*EntityRecChild
+}
+
+func NewEntity() Entity {
+	return Entity{Children: make([]*EntityRecChild, 0)}
 }
 
 func (a Entity) String() string {
+	return fmt.Sprintf("{Id = %d, Title = '%s', Type = %d, Specification = '%s', Marking = %s, Note = '%s', Children = %v}\n",
+		a.Id, a.Title, a.Type, a.Specification, MarkingTitle[a.Marking], a.Note, a.Children)
+}
+
+type EntityRec struct {
+	IdP int64
+	EntityRecChild
+}
+
+type MarkingLine struct {
+	Id       int64
+	Entities []*Entity
+}
+
+func (m MarkingLine) String() string {
 	var c string
-	if a.Children == nil {
-		c = "nil"
-	} else {
-		c = fmt.Sprint(*a.Children)
+	for _, val := range m.Entities {
+		c += fmt.Sprintf("%s, ", val.Title)
 	}
-	return fmt.Sprintf("{Id = %d, Title = %s, Type = %d, Specification = %s, Marking = %t, Note = %s, Children = %s}",
-		a.Id, a.Title, a.Type, a.Specification, a.Marking, a.Note, c)
+	return fmt.Sprintf("\n{Id: %d, Entities: [%v]}", m.Id, c)
+}
+
+func MsgError(err error) string {
+	return strings.Replace(err.Error(), ": ", ":\n", -1)
 }

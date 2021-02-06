@@ -15,21 +15,19 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 	m := make(map[int64]string)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			err = errors.Wrap(err, data.S.ErrorPingDB)
-			return err
+			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
 		QwStr := data.SelectType("EntityType")
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
+			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			row := IdTitle{}
 			err := rows.Scan(&row.Id, &row.Title)
 			if err != nil {
-				err = errors.Wrap(err, data.S.ErrorDecryptRow)
-				return err
+				return errors.Wrap(err, data.S.ErrorDecryptRow)
 			}
 			arr = append(arr, &row)
 			m[row.Id] = row.Title
@@ -119,9 +117,9 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogAdd)
 									if err := wf.add(db, tableName); err != nil {
-										err = errors.Wrap(err, data.S.ErrorAdd)
+										err = errors.Wrap(err, data.S.ErrorAddRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
@@ -130,9 +128,9 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogChange)
 									if err := wf.change(db, tableName); err != nil {
-										err = errors.Wrap(err, data.S.ErrorChange)
+										err = errors.Wrap(err, data.S.ErrorChangeRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
@@ -141,9 +139,9 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogDelete)
 									if err := wf.delete(db, tableName); err != nil {
-										err = errors.Wrap(err, data.S.ErrorDelete)
+										err = errors.Wrap(err, data.S.ErrorDeleteRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},

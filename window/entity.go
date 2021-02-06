@@ -14,14 +14,12 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 	arr := make([]*EntityRecChild, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			err = errors.Wrap(err, data.S.ErrorPingDB)
-			return err
+			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-
 		QwStr := data.SelectEntityRecChild(parent)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
+			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
 		}
 		defer rows.Close()
 		var e_type, title string
@@ -29,8 +27,7 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 			row := EntityRecChild{}
 			err := rows.Scan(&row.Id, &e_type, &title, &row.Count)
 			if err != nil {
-				err = errors.Wrap(err, data.S.ErrorDecryptRow)
-				return err
+				return errors.Wrap(err, data.S.ErrorDecryptRow)
 			}
 			row.Title = e_type + " " + title
 			arr = append(arr, &row)
@@ -52,14 +49,15 @@ type windowsFormEntity struct {
 	modelType  []*IdTitle
 	modelTable *modelEntityComponent
 	tv         *walk.TableView
+	mapIdTitle map[int64]string
 }
 
 func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error) {
 	var err error
 	wf := new(windowsFormEntity)
 	wf.modelTable = new(modelEntityComponent)
-	wf.modelTable.items = *entity.Children
-	wf.modelType, _, err = SelectIdTitle(db, "EntityType")
+	wf.modelTable.items = entity.Children
+	wf.modelType, wf.mapIdTitle, err = SelectIdTitle(db, "EntityType")
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorTypeInit)
 		return nil, err
@@ -112,8 +110,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Text: "Название:",
 							},
 							dec.LineEdit{
-								MinSize: dec.Size{170, 0},
-								Text:    dec.Bind("Title"),
+								MaxLength: 255,
+								MinSize:   dec.Size{170, 0},
+								Text:      dec.Bind("Title"),
 							},
 
 							dec.Label{
@@ -130,7 +129,8 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Text: "Спецификация:",
 							},
 							dec.LineEdit{
-								Text: dec.Bind("Specification"),
+								MaxLength: 255,
+								Text:      dec.Bind("Specification"),
 							},
 
 							dec.RadioButtonGroupBox{
@@ -151,6 +151,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							},
 							dec.TextEdit{
 								ColumnSpan: 2,
+								MaxLength:  1023,
 								MinSize:    dec.Size{0, 100},
 								Text:       dec.Bind("Note"),
 							},
@@ -180,9 +181,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogAdd)
 									if err := wf.add(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorAdd)
+										err = errors.Wrap(err, data.S.ErrorAddRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
@@ -192,9 +193,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogChange)
 									if err := wf.change(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorChange)
+										err = errors.Wrap(err, data.S.ErrorChangeRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
@@ -204,9 +205,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								OnClicked: func() {
 									log.Println(data.S.Info, data.S.LogDelete)
 									if err := wf.delete(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorDelete)
+										err = errors.Wrap(err, data.S.ErrorDeleteRow)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
@@ -218,10 +219,10 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 									if err := databind.Submit(); err != nil {
 										err = errors.Wrap(err, data.S.ErrorSubmit)
 										log.Println(data.S.Error, err)
-										walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 										return
 									}
-									entity.Children = &wf.modelTable.items
+									entity.Children = wf.modelTable.items
 									wf.Accept()
 								},
 							},
@@ -258,6 +259,14 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 		return nil
 	}
 	if entity.Id != 0 {
+		s, err := checkEntityRec(db, entity.Id, []*EntityRecChild{&child})
+		if err != nil {
+			return err
+		}
+		if s != "" {
+			s = wf.mapIdTitle[entity.Type] + " " + entity.Title + " -> " + s
+			return errors.Wrap(errors.New(s), data.S.ErrorGraphCircle)
+		}
 		QwStr := data.InsertEntityRec(entity.Id, child.Id, child.Count)
 		if err = db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
@@ -338,4 +347,31 @@ func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	}
 	wf.modelTable.PublishRowsChanged(index, wf.modelTable.RowCount()-1)
 	return nil
+}
+
+func checkEntityRec(db *sql.DB, parent int64, children []*EntityRecChild) (string, error) {
+	for _, val := range children {
+		if parent == val.Id {
+			return val.Title, nil
+		}
+	}
+	for _, val := range children {
+		if err := db.Ping(); err != nil {
+			return "", errors.Wrap(err, data.S.ErrorPingDB)
+		}
+		children2, err := SelectEntityRecChild(db, val.Id)
+		if err != nil {
+			return "", errors.Wrap(err, data.S.ErrorSubquery)
+		}
+		s, err := checkEntityRec(db, parent, children2)
+		if err != nil {
+			return "", err
+		}
+		if s == "" {
+			return s, nil
+		} else {
+			return val.Title + " -> " + s, nil
+		}
+	}
+	return "", nil
 }

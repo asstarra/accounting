@@ -10,25 +10,23 @@ import (
 	"github.com/pkg/errors"
 )
 
-func SelectEntities(db *sql.DB, title string, entityType int64) ([]*Entity, error) {
+func SelectEntities(db *sql.DB, title string, entityType int64, isChange bool) ([]*Entity, error) {
 	arr := make([]*Entity, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			err = errors.Wrap(err, data.S.ErrorPingDB)
-			return err
+			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		QwStr := data.SelectEntity(title, entityType)
+		QwStr := data.SelectEntity(title, entityType, isChange)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQuery+QwStr)
+			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
-			row := Entity{}
+			row := NewEntity()
 			err := rows.Scan(&row.Id, &row.Title, &row.Type, &row.Specification, &row.Marking, &row.Note)
 			if err != nil {
-				err = errors.Wrap(err, data.S.ErrorDecryptRow)
-				return err
+				return errors.Wrap(err, data.S.ErrorDecryptRow)
 			}
 			arr = append(arr, &row)
 		}
@@ -52,10 +50,10 @@ type windowsFormEntities struct {
 	tv         *walk.TableView
 }
 
-func newWindowsFormEntities(db *sql.DB) (*windowsFormEntities, error) {
+func newWindowsFormEntities(db *sql.DB, isChange bool) (*windowsFormEntities, error) {
 	var err error
 	wf := new(windowsFormEntities)
-	wf.modelTable, err = newModelEntitiesComponent(db)
+	wf.modelTable, err = newModelEntitiesComponent(db, isChange)
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorTableInit)
 		return nil, err
@@ -69,10 +67,10 @@ func newWindowsFormEntities(db *sql.DB) (*windowsFormEntities, error) {
 	return wf, nil
 }
 
-func newModelEntitiesComponent(db *sql.DB) (*modelEntitiesComponent, error) {
+func newModelEntitiesComponent(db *sql.DB, isChange bool) (*modelEntitiesComponent, error) {
 	var err error
 	m := new(modelEntitiesComponent)
-	m.items, err = SelectEntities(db, "", 0)
+	m.items, err = SelectEntities(db, "", 0, isChange)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +104,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 	var err error
 	var databind *walk.DataBinder
 	search := new(IdTitle)
-	wf, err := newWindowsFormEntities(db)
+	wf, err := newWindowsFormEntities(db, isChange)
 	if err != nil {
 		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
@@ -153,14 +151,14 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 							if err := databind.Submit(); err != nil {
 								err = errors.Wrap(err, data.S.ErrorSubmit)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
 							lastLen := wf.modelTable.RowCount()
-							if wf.modelTable.items, err = SelectEntities(db, search.Title, search.Id); err != nil {
+							if wf.modelTable.items, err = SelectEntities(db, search.Title, search.Id, isChange); err != nil {
 								err = errors.Wrap(err, data.S.ErrorSubquery)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
 							nowLen := wf.modelTable.RowCount()
@@ -193,9 +191,9 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 						OnClicked: func() {
 							log.Println(data.S.Info, data.S.LogAdd)
 							if err := wf.add(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorAdd)
+								err = errors.Wrap(err, data.S.ErrorAddRow)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -204,9 +202,9 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 						OnClicked: func() {
 							log.Println(data.S.Info, data.S.LogChange)
 							if err := wf.change(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorChange)
+								err = errors.Wrap(err, data.S.ErrorChangeRow)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -215,9 +213,9 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 						OnClicked: func() {
 							log.Println(data.S.Info, data.S.LogDelete)
 							if err := wf.delete(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorDelete)
+								err = errors.Wrap(err, data.S.ErrorDeleteRow)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -261,9 +259,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 }
 
 func (wf windowsFormEntities) add(db *sql.DB) error {
-	var entity Entity
-	children := make([]*EntityRecChild, 0)
-	entity.Children = &children
+	entity := NewEntity()
 	cmd, err := EntityRunDialog(wf, db, &entity)
 	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
 	if err != nil {
@@ -297,12 +293,12 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 		return nil
 	}
 	wf.modelTable.items[index].Id = id
-	for _, v := range *entity.Children {
-		QwStrChild := data.InsertEntityRec(id, v.Id, v.Count)
+	for _, val := range entity.Children {
+		QwStrChild := data.InsertEntityRec(id, val.Id, val.Count)
 		if _, err := db.Exec(QwStrChild); err != nil {
 			err = errors.Wrap(err, data.S.ErrorAddDB+QwStrChild)
 			log.Println(data.S.Error, err)
-			walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+			walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 		}
 	}
 	return nil
@@ -320,7 +316,7 @@ func (wf windowsFormEntities) change(db *sql.DB) error {
 	if err != nil {
 		return errors.Wrap(err, data.S.ErrorSubquery)
 	}
-	entity.Children = &children
+	entity.Children = children
 	cmd, err := EntityRunDialog(wf, db, entity)
 	log.Printf(data.S.EndWindow, data.S.Entity, cmd)
 

@@ -59,7 +59,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 							}()); err != nil {
 								err = errors.Wrap(err, data.S.ErrorChoose)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -84,7 +84,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 							if err := databind.Submit(); err != nil {
 								err = errors.Wrap(err, data.S.ErrorSubmit)
 								log.Println(data.S.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, err.Error(), data.Icon.Error)
+								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
 							wf.Accept()

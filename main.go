@@ -19,27 +19,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func errorWindow(s string) {
-	if _, err := (dec.MainWindow{
-		Title:  data.S.MsgBoxError,
-		Size:   dec.Size{300, 80},
-		Layout: dec.VBox{},
-		Children: []dec.Widget{
-			dec.Label{
-				Text: s,
-			},
-		},
-	}.Run()); err != nil {
-		log.Printf("ERROR! In errorWindow, err = %v", err)
-	}
-}
-
 func main() {
 	sErr := "Error: "
 	f, err := os.OpenFile("logfile.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorOpenFile+"logfile.txt")
-		errorWindow(sErr + err.Error())
+		window.ErrorRunWindow(sErr + err.Error())
 		log.Println(data.S.Error, err)
 		return
 	}
@@ -51,7 +36,7 @@ func main() {
 	err = data.Init()
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorInit)
-		errorWindow(sErr + err.Error())
+		window.ErrorRunWindow(sErr + err.Error())
 		log.Println(data.S.Error, err)
 		return
 	}
@@ -59,23 +44,17 @@ func main() {
 	db, err := sql.Open("mysql", data.DataSourseTcp())
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorOpedDB)
-		errorWindow(sErr + err.Error())
+		window.ErrorRunWindow(sErr + err.Error())
 		log.Println(data.S.Error, err)
 		return
 	}
 	defer db.Close()
 	if err = db.Ping(); err != nil {
 		err = errors.Wrap(err, data.S.ErrorPingDB)
-		errorWindow(sErr + err.Error())
+		window.ErrorRunWindow(sErr + err.Error())
 		log.Println(data.S.Error, err)
 		return
 	}
-
-	entity := window.Entity{}
-	children := make([]*window.EntityRecChild, 0)
-	entity.Children = &children
-	entityRec := window.EntityRecChild{}
-	idTitle := window.IdTitle{}
 
 	var mw *walk.MainWindow
 	if err := (dec.MainWindow{
@@ -95,39 +74,25 @@ func main() {
 				},
 			},
 			dec.PushButton{
-				Text: "Entity",
-				OnClicked: func() {
-					cmd, err := window.EntityRunDialog(mw, db, &entity)
-					if err != nil {
-						log.Println("ERROR!", err)
-					}
-					log.Printf(data.S.EndWindow, data.S.Entity, cmd)
-				},
-			},
-			dec.PushButton{
-				Text: "Entity_rec",
-				OnClicked: func() {
-					cmd, err := window.EntityRecRunDialog(mw, db, false, &entityRec)
-					if err != nil {
-						log.Println("ERROR!", err)
-					}
-					log.Printf(data.S.EndWindow, data.S.EntityRec, cmd)
-				},
-			},
-			dec.PushButton{
 				Text: "Entities",
 				OnClicked: func() {
-					cmd, err := window.EntitiesRunDialog(mw, db, true, &idTitle)
+					cmd, err := window.EntitiesRunDialog(mw, db, true, nil)
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
 					log.Printf(data.S.EndWindow, data.S.Entities, cmd)
 				},
 			},
+			dec.PushButton{
+				Text: "MarkingLine",
+				OnClicked: func() {
+					window.UpdateMarkingLine(db)
+				},
+			},
 		},
 	}.Create()); err != nil {
 		err = errors.Wrap(err, data.S.ErrorCreateWindow)
-		errorWindow(sErr + err.Error())
+		window.ErrorRunWindow(sErr + err.Error())
 		log.Println(data.S.Error, err)
 		return
 	}
