@@ -63,17 +63,18 @@ type EntityRec struct {
 }
 
 type MarkingLine struct {
-	Id       int64
-	Entities []*Entity
+	Id        int64
+	Hierarchy []int64
 }
 
 func (m MarkingLine) String() string {
-	var c string
-	for _, val := range m.Entities {
-		c += fmt.Sprintf("%s, ", val.Title)
-	}
-	return fmt.Sprintf("\n{Id: %d, Entities: [%v]}", m.Id, c)
+	return fmt.Sprintf("{%d -> %v}\n", m.Id, m.Hierarchy)
 }
+
+// type MarkingLineGraph struct {
+// 	MapIdEntity  map[int64]*Entity
+// 	MarkingLines []*MarkingLine
+// }
 
 func MsgError(err error) string {
 	return strings.Replace(err.Error(), ": ", ":\n", -1)

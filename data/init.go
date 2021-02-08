@@ -112,7 +112,8 @@ var S = struct {
 	InSelectEntityRecChild    string
 	InSelectEntityRec         string
 	InSelectIdTitle           string
-	InSelectMarkingLine       string
+	InSelectMarkingLineNew    string
+	InSelectMarkingLineOld    string
 	InSelectMarkingLineEntity string
 
 	MsgChooseRow  string
@@ -195,7 +196,8 @@ var S = struct {
 	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
 	InSelectEntityRec:         "In SelectEntityRec()",
 	InSelectIdTitle:           "In SelectIdTitle(tableName = %s)",
-	InSelectMarkingLine:       "In SelectMarkingLine()",
+	InSelectMarkingLineNew:    "In SelectMarkingLineNew()",
+	InSelectMarkingLineOld:    "In SelectMarkingLineOld()",
 	InSelectMarkingLineEntity: "In SelectMarkingLineEntity(id = %d)",
 
 	MsgChooseRow:  "Выберите строчку",
