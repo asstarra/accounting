@@ -10,11 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Структура, содержащая описание и переменные окна.
 type windowsFormEntityRec struct {
 	*walk.Dialog
 	buttonEntitiesWidget *walk.PushButton
 }
 
+// Описание и запуск диалогового окна.
 func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *EntityRecChild) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.EntityRec)
 	var databind *walk.DataBinder

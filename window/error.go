@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Описание и запуск диалогового окна.
 func ErrorRunWindow(s string) {
 	if _, err := (dec.MainWindow{
 		Title:  data.S.MsgBoxError,

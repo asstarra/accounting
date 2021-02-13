@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Выборка идентификатора и названия из таблиц типа Type.
 func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, error) {
 	arr := make([]*IdTitle, 0)
 	m := make(map[int64]string)
@@ -17,7 +18,7 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 		if err := db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		QwStr := data.SelectType("EntityType")
+		QwStr := data.SelectType(tableName)
 		rows, err := db.Query(QwStr)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
@@ -39,11 +40,13 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 	return arr, m, nil
 }
 
+// Сруктура, содержащая модель таблицы.
 type modelTypeComponent struct {
 	walk.TableModelBase
 	items []*IdTitle
 }
 
+// Структура, содержащая описание и переменные окна.
 type windowsFormType struct {
 	*walk.Dialog
 	modelTable *modelTypeComponent
@@ -51,11 +54,12 @@ type windowsFormType struct {
 	textW      *walk.LineEdit
 }
 
+// Инициализация модели окна.
 func newWindowsFormType(db *sql.DB, tableName string) (*windowsFormType, error) {
 	var err error
 	wf := new(windowsFormType)
 	wf.modelTable = new(modelTypeComponent)
-	wf.modelTable.items, _, err = SelectIdTitle(db, "EntityType")
+	wf.modelTable.items, _, err = SelectIdTitle(db, tableName)
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorTableInit)
 		return nil, err
@@ -77,6 +81,7 @@ func (m *modelTypeComponent) Value(row, col int) interface{} {
 	panic(data.S.ErrorUnexpectedColumn)
 }
 
+// Описание и запуск диалогового окна.
 func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.Type)
 	wf, err := newWindowsFormType(db, tableName)
@@ -160,6 +165,7 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 	return wf.Run(), nil
 }
 
+// Функция, для добавления строки в таблицу.
 func (wf windowsFormType) add(db *sql.DB, tableName string) error {
 	if wf.textW.Text() == "" {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgEmptyTitle, data.Icon.Info)
@@ -192,6 +198,7 @@ func (wf windowsFormType) add(db *sql.DB, tableName string) error {
 	return nil
 }
 
+// Функция, для изменения строки в таблице.
 func (wf windowsFormType) change(db *sql.DB, tableName string) error {
 	if wf.textW.Text() == "" {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgEmptyTitle, data.Icon.Info)
@@ -216,6 +223,7 @@ func (wf windowsFormType) change(db *sql.DB, tableName string) error {
 	return nil
 }
 
+// Функция, для удаления строки из таблицы.
 func (wf windowsFormType) delete(db *sql.DB, tableName string) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)

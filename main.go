@@ -64,9 +64,29 @@ func main() {
 		Layout:   dec.VBox{},
 		Children: []dec.Widget{
 			dec.PushButton{
-				Text: "Type",
+				Text: "EntityType",
 				OnClicked: func() {
 					cmd, err := window.TypeRunDialog(mw, db, "EntityType")
+					if err != nil {
+						log.Println("ERROR!", err)
+					}
+					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+				},
+			},
+			dec.PushButton{
+				Text: "StatusType",
+				OnClicked: func() {
+					cmd, err := window.TypeRunDialog(mw, db, "StatusType")
+					if err != nil {
+						log.Println("ERROR!", err)
+					}
+					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+				},
+			},
+			dec.PushButton{
+				Text: "Person",
+				OnClicked: func() {
+					cmd, err := window.TypeRunDialog(mw, db, "Person")
 					if err != nil {
 						log.Println("ERROR!", err)
 					}

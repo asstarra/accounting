@@ -10,6 +10,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Выборка из таблицы Entity всех ее полей удовлетворяющих условию,
+// где в значения поля Title входит title,
+// значение поля Type равно entityType (при 0, разрешен любой тип),
+// isChange определяет, разрешено ли выбирать строчки, где тип сущности это заказ.
+// Информация о дочерних сущностях не выбирается.
 func SelectEntities(db *sql.DB, title string, entityType int64, isChange bool) ([]*Entity, error) {
 	arr := make([]*Entity, 0)
 	if err := (func() error {
@@ -37,12 +42,14 @@ func SelectEntities(db *sql.DB, title string, entityType int64, isChange bool) (
 	return arr, nil
 }
 
+// Сруктура, содержащая модель таблицы.
 type modelEntitiesComponent struct {
 	walk.TableModelBase
 	items      []*Entity
 	mapIdTitle map[int64]string
 }
 
+// Структура, содержащая описание и переменные окна.
 type windowsFormEntities struct {
 	*walk.Dialog
 	modelType  []*IdTitle
@@ -50,6 +57,7 @@ type windowsFormEntities struct {
 	tv         *walk.TableView
 }
 
+// Инициализация модели окна.
 func newWindowsFormEntities(db *sql.DB, isChange bool) (*windowsFormEntities, error) {
 	var err error
 	wf := new(windowsFormEntities)
@@ -67,6 +75,7 @@ func newWindowsFormEntities(db *sql.DB, isChange bool) (*windowsFormEntities, er
 	return wf, nil
 }
 
+// Инициализация модели таблицы.
 func newModelEntitiesComponent(db *sql.DB, isChange bool) (*modelEntitiesComponent, error) {
 	var err error
 	m := new(modelEntitiesComponent)
@@ -99,6 +108,7 @@ func (m *modelEntitiesComponent) Value(row, col int) interface{} {
 	panic(data.S.ErrorUnexpectedColumn)
 }
 
+// Описание и запуск диалогового окна.
 func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTitle) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.Entities)
 	var err error
@@ -258,6 +268,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 	return wf.Run(), nil
 }
 
+// Функция, для добавления строки в таблицу.
 func (wf windowsFormEntities) add(db *sql.DB) error {
 	entity := NewEntity()
 	cmd, err := EntityRunDialog(wf, db, &entity)
@@ -304,6 +315,7 @@ func (wf windowsFormEntities) add(db *sql.DB) error {
 	return nil
 }
 
+// Функция, для изменения строки в таблице.
 func (wf windowsFormEntities) change(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
@@ -340,6 +352,7 @@ func (wf windowsFormEntities) change(db *sql.DB) error {
 	return nil
 }
 
+// Функция, для удаления строки из таблицы.
 func (wf windowsFormEntities) delete(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)

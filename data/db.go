@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+// Строки запроса к БД.
+
 func SelectType(tableName string) string {
 	table := Tab[tableName]
 	sId := table.Columns["Id"].Name
@@ -123,7 +125,7 @@ func SelectEntityRec() string {
 		sIdC)
 }
 
-func InsertEntityRec(idP, idC int64, count int) string {
+func InsertEntityRec(idP, idC int64, count int32) string {
 	table := Tab["EntityRec"]
 	sIdP := table.Columns["Parent"].Name
 	sIdC := table.Columns["Child"].Name
@@ -132,7 +134,7 @@ func InsertEntityRec(idP, idC int64, count int) string {
 		table.Name, sIdP, sIdC, sCount, idP, idC, count)
 }
 
-func UpdateEntityRec(idP, idC int64, count int) string {
+func UpdateEntityRec(idP, idC int64, count int32) string {
 	table := Tab["EntityRec"]
 	sIdP := table.Columns["Parent"].Name
 	sIdC := table.Columns["Child"].Name

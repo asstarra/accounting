@@ -11,16 +11,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Переменные для подключения к БД.
 var DB struct {
 	Host     string `json:"Host"`
 	Password string `json:"Password"`
 	Database string `json:"Database"`
 }
 
+// Получение строки подключения.
 func DataSourseTcp() string {
 	return fmt.Sprint(DB.Host, ":", DB.Password, "@tcp/", DB.Database)
 }
 
+// Название полей и таблиц.
 var Tab map[string]Table
 
 type Table struct {
@@ -32,6 +35,7 @@ type Column struct {
 	Name string `json:"Name"`
 }
 
+// Храним глобальные регистры.
 var Reg Register
 
 type Register struct {
@@ -50,6 +54,7 @@ func initRegister() {
 	dec.MustRegisterCondition("IsSaveDialog", Reg.IsSaveDialog)
 }
 
+// Храним иконки для разных сообщений.
 var Icon = struct {
 	Critical walk.MsgBoxStyle
 	Error    walk.MsgBoxStyle
@@ -62,6 +67,7 @@ var Icon = struct {
 	Info:     walk.MsgBoxIconInformation,
 }
 
+// Строковые константы.
 var S = struct {
 	Panic   string
 	Error   string
@@ -234,6 +240,7 @@ var S = struct {
 	ErrorUpdateMarkingLine: "При обновлении иерархии производственных линий произошла ошибка",
 }
 
+// Чтение json из файла.
 func initFromFile(filename string, data interface{}) error {
 	configFile, err := os.Open(filename)
 	if err != nil {
@@ -247,6 +254,7 @@ func initFromFile(filename string, data interface{}) error {
 	return nil
 }
 
+// Инициализация глобальных переменных.
 func Init() error {
 	err := initFromFile("config/database.json", &DB)
 	if err != nil {

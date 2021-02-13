@@ -16,7 +16,7 @@ func (a IdTitle) String() string {
 
 type EntityRecChild struct {
 	IdTitle
-	Count int
+	Count int32
 }
 
 func (a EntityRecChild) String() string {
@@ -62,9 +62,14 @@ type EntityRec struct {
 	EntityRecChild
 }
 
+type IdCount struct {
+	Id    int64
+	Count int32
+}
+
 type MarkingLine struct {
 	Id        int64
-	Hierarchy []int64
+	Hierarchy []IdCount
 }
 
 func (m MarkingLine) String() string {
@@ -76,6 +81,7 @@ func (m MarkingLine) String() string {
 // 	MarkingLines []*MarkingLine
 // }
 
+// Функция конвертирующая ошибки для показа пользователю.
 func MsgError(err error) string {
 	return strings.Replace(err.Error(), ": ", ":\n", -1)
 }

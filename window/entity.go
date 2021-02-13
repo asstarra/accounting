@@ -10,6 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Поиск дочерних сущностей для заданной сущности (id родительской таблицы = parent).
+// Выборка из таблицы EntityRec id дочерней таблицы и количества.
+// Поле title = тип сущности + название сущности.
 func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 	arr := make([]*EntityRecChild, 0)
 	if err := (func() error {
@@ -39,11 +42,13 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 	return arr, nil
 }
 
+// Сруктура, содержащая модель таблицы.
 type modelEntityComponent struct {
 	walk.TableModelBase
 	items []*EntityRecChild
 }
 
+// Структура, содержащая описание и переменные окна.
 type windowsFormEntity struct {
 	*walk.Dialog
 	modelType  []*IdTitle
@@ -52,6 +57,7 @@ type windowsFormEntity struct {
 	mapIdTitle map[int64]string
 }
 
+// Инициализация модели окна.
 func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error) {
 	var err error
 	wf := new(windowsFormEntity)
@@ -81,6 +87,7 @@ func (m *modelEntityComponent) Value(row, col int) interface{} {
 	panic(data.S.ErrorUnexpectedColumn)
 }
 
+// Описание и запуск диалогового окна.
 func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 	log.Printf(data.S.BeginWindow, data.S.Entity)
 	sButtonAdd := " компонент" // GO-TO возможно нужно? вынести строку
@@ -248,6 +255,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 	return wf.Run(), nil
 }
 
+// Функция, для добавления строки в таблицу.
 func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	child := EntityRecChild{}
 	cmd, err := EntityRecRunDialog(wf, db, false, &child)
@@ -293,6 +301,7 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	return nil
 }
 
+// Функция, для изменения строки в таблице.
 func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
@@ -322,6 +331,7 @@ func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 	return nil
 }
 
+// Функция, для удаления строки из таблицы.
 func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
 		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
@@ -349,6 +359,9 @@ func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	return nil
 }
 
+// Рекурсивная функция, для проверки состава (таблица EntityRec) на наличие циклов.
+// Возращает строку, которая опиывает первый найденный цикл.
+// Если циклов нет, возращает пустую строку.
 func checkEntityRec(db *sql.DB, parent int64, children []*EntityRecChild) (string, error) {
 	for _, val := range children {
 		if parent == val.Id {
