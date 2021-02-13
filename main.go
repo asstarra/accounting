@@ -104,9 +104,13 @@ func main() {
 				},
 			},
 			dec.PushButton{
-				Text: "MarkingLine",
+				Text: "MarkedDetail",
 				OnClicked: func() {
-					window.UpdateMarkingLine(db)
+					cmd, err := window.MarkedDetailsRunDialog(mw, db, true, nil)
+					if err != nil {
+						log.Println("ERROR!", err)
+					}
+					log.Printf(data.S.EndWindow, data.S.MarkedDetails, cmd)
 				},
 			},
 		},

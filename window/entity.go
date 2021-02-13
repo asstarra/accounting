@@ -51,10 +51,10 @@ type modelEntityComponent struct {
 // Структура, содержащая описание и переменные окна.
 type windowsFormEntity struct {
 	*walk.Dialog
-	modelType  []*IdTitle
-	modelTable *modelEntityComponent
-	tv         *walk.TableView
-	mapIdTitle map[int64]string
+	modelType    []*IdTitle
+	modelTable   *modelEntityComponent
+	tv           *walk.TableView
+	mapIdToTitle map[int64]string
 }
 
 // Инициализация модели окна.
@@ -63,7 +63,7 @@ func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error
 	wf := new(windowsFormEntity)
 	wf.modelTable = new(modelEntityComponent)
 	wf.modelTable.items = entity.Children
-	wf.modelType, wf.mapIdTitle, err = SelectIdTitle(db, "EntityType")
+	wf.modelType, wf.mapIdToTitle, err = SelectIdTitle(db, "EntityType")
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorTypeInit)
 		return nil, err
@@ -146,9 +146,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Layout:     dec.HBox{},
 								DataMember: "Marking",
 								Buttons: []dec.RadioButton{
-									{Text: MarkingTitle[MarkingNo], Value: MarkingNo},
-									{Text: MarkingTitle[MarkingAll], Value: MarkingAll},
-									{Text: MarkingTitle[MarkingYear], Value: MarkingYear},
+									{Text: MapMarkingToTitle[MarkingNo], Value: MarkingNo},
+									{Text: MapMarkingToTitle[MarkingAll], Value: MarkingAll},
+									{Text: MapMarkingToTitle[MarkingYear], Value: MarkingYear},
 								},
 							},
 
@@ -272,7 +272,7 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 			return err
 		}
 		if s != "" {
-			s = wf.mapIdTitle[entity.Type] + " " + entity.Title + " -> " + s
+			s = wf.mapIdToTitle[entity.Type] + " " + entity.Title + " -> " + s
 			return errors.Wrap(errors.New(s), data.S.ErrorGraphCircle)
 		}
 		QwStr := data.InsertEntityRec(entity.Id, child.Id, child.Count)

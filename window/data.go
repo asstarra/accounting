@@ -32,7 +32,7 @@ const (
 	MarkingYear
 )
 
-var MarkingTitle = map[Marking]string{
+var MapMarkingToTitle = map[Marking]string{
 	MarkingNo:   "Нет",
 	MarkingAll:  "Сквозная",
 	MarkingYear: "По годам",
@@ -54,7 +54,7 @@ func NewEntity() Entity {
 
 func (a Entity) String() string {
 	return fmt.Sprintf("{Id = %d, Title = '%s', Type = %d, Specification = '%s', Marking = %s, Note = '%s', Children = %v}\n",
-		a.Id, a.Title, a.Type, a.Specification, MarkingTitle[a.Marking], a.Note, a.Children)
+		a.Id, a.Title, a.Type, a.Specification, MapMarkingToTitle[a.Marking], a.Note, a.Children)
 }
 
 type EntityRec struct {
@@ -77,9 +77,20 @@ func (m MarkingLine) String() string {
 }
 
 // type MarkingLineGraph struct {
-// 	MapIdEntity  map[int64]*Entity
+// 	MapIdToEntity  map[int64]*Entity
 // 	MarkingLines []*MarkingLine
 // }
+
+type MarkedDetail struct {
+	Id      int64
+	Marking int64
+	Mark    string
+	Parent  struct {
+		Id      int64
+		Marking int64
+		Mark    string
+	}
+}
 
 // Функция конвертирующая ошибки для показа пользователю.
 func MsgError(err error) string {

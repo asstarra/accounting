@@ -85,15 +85,19 @@ var S = struct {
 	RunWindow    string
 	EndWindow    string
 
-	Entity    string
-	Entities  string
-	EntityRec string
-	Type      string
+	Entity        string
+	Entities      string
+	EntityRec     string
+	Type          string
+	MarkedDetail  string
+	MarkedDetails string
 
-	HeadingEntity    string
-	HeadingEntities  string
-	HeadingEntityRec string
-	HeadingType      string
+	HeadingEntity        string
+	HeadingEntities      string
+	HeadingEntityRec     string
+	HeadingType          string
+	HeadingMarkedDetail  string
+	HeadingMarkedDetails string
 
 	LogOk     string
 	LogCansel string
@@ -114,6 +118,8 @@ var S = struct {
 	InEntityRunDialog         string
 	InEntityRecRunDialog      string
 	InTypeRunDialog           string
+	InMarkedDetailRunDialog   string
+	InMarkedDetailsRunDialog  string
 	InSelectEntities          string
 	InSelectEntityRecChild    string
 	InSelectEntityRec         string
@@ -121,6 +127,8 @@ var S = struct {
 	InSelectMarkingLineNew    string
 	InSelectMarkingLineOld    string
 	InSelectMarkingLineEntity string
+	InSelectMarkedDetail      string
+	InSelectMarkedDetails     string
 
 	MsgChooseRow  string
 	MsgEmptyTitle string
@@ -169,15 +177,19 @@ var S = struct {
 	RunWindow:    "INFO: RUN window %s",
 	EndWindow:    "INFO: END window %s, cmd %v",
 
-	Entity:    "ENTITY",
-	Entities:  "ENTITIES",
-	EntityRec: "ENTITY_REC",
-	Type:      "TYPE",
+	Entity:        "ENTITY",
+	Entities:      "ENTITIES",
+	EntityRec:     "ENTITY_REC",
+	Type:          "TYPE",
+	MarkedDetail:  "MARKED_DETAIL",
+	MarkedDetails: "MARKED_DETAILS",
 
-	HeadingEntity:    "Учет - Сущность",
-	HeadingEntities:  "Учет - Сущности",
-	HeadingEntityRec: "Учет - Дочерний компонент",
-	HeadingType:      "Учет - Типы",
+	HeadingEntity:        "Учет - Сущность",
+	HeadingEntities:      "Учет - Сущности",
+	HeadingEntityRec:     "Учет - Дочерний компонент",
+	HeadingType:          "Учет - Типы",
+	HeadingMarkedDetail:  "Учет - Маркировка детали",
+	HeadingMarkedDetails: "Учет - Список деталей",
 
 	LogOk:     "Ok",
 	LogCansel: "Cansel",
@@ -198,6 +210,8 @@ var S = struct {
 	InEntityRunDialog:         "In EntityRunDialog(entity = %v)",
 	InEntityRecRunDialog:      "In EntityRecRunDialog(child = %v)",
 	InTypeRunDialog:           "In TypeRunDialog(tableName = %s)",
+	InMarkedDetailRunDialog:   "In MarkedDetailRunDialog(detail = %v)",
+	InMarkedDetailsRunDialog:  "In MarkedDetailsRunDialog(isChage = %t, parent detail = %v)",
 	InSelectEntities:          "In SelectEntities(title = \"%s\", entityType = %d)",
 	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
 	InSelectEntityRec:         "In SelectEntityRec()",
@@ -205,6 +219,8 @@ var S = struct {
 	InSelectMarkingLineNew:    "In SelectMarkingLineNew()",
 	InSelectMarkingLineOld:    "In SelectMarkingLineOld()",
 	InSelectMarkingLineEntity: "In SelectMarkingLineEntity(id = %d)",
+	InSelectMarkedDetail:      "",
+	InSelectMarkedDetails:     "In SelectMarkedDetails(marking = %v)",
 
 	MsgChooseRow:  "Выберите строчку",
 	MsgEmptyTitle: "Название не может состоять из пустой строки",
