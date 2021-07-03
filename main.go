@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"accounting/data"
+	"accounting/optimization"
 	"accounting/window"
 )
 
@@ -56,6 +57,31 @@ func main() {
 		return
 	}
 
+	// optimization.A()
+	// if opt, err := optimization.NewQualificationTable(db); err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(opt)
+	// }
+	// if opt, err := optimization.SelectPerson(db, nil, nil); err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(opt)
+	// }
+	// if opt, err := optimization.SelectDetail(db, nil, nil); err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(opt)
+	// }
+	// if opt, err := optimization.SelectDays(db, nil, nil); err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(opt)
+	// }
+	// var o optimization.Optimization
+	// o.Init(db, nil, nil)
+	// o.Run()
+
 	var mw *walk.MainWindow
 	if err := (dec.MainWindow{
 		AssignTo: &mw,
@@ -94,6 +120,16 @@ func main() {
 				},
 			},
 			dec.PushButton{
+				Text: "Operation",
+				OnClicked: func() {
+					cmd, err := window.TypeRunDialog(mw, db, "Operation")
+					if err != nil {
+						log.Println("ERROR!", err)
+					}
+					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+				},
+			},
+			dec.PushButton{
 				Text: "Entities",
 				OnClicked: func() {
 					cmd, err := window.EntitiesRunDialog(mw, db, true, nil)
@@ -111,6 +147,18 @@ func main() {
 						log.Println("ERROR!", err)
 					}
 					log.Printf(data.S.EndWindow, data.S.MarkedDetails, cmd)
+				},
+			},
+			dec.PushButton{
+				Text: "Маршрутка",
+				OnClicked: func() {
+					var o optimization.Optimization
+					o.Init(db, nil, nil)
+					o.Run()
+					if err != nil {
+						log.Println("ERROR!", err)
+					}
+					log.Println(err)
 				},
 			},
 		},

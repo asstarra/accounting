@@ -67,6 +67,14 @@ var Icon = struct {
 	Info:     walk.MsgBoxIconInformation,
 }
 
+var C = struct {
+	TimeLayoutMySql string
+	TimeLayoutDay   string
+}{
+	TimeLayoutMySql: "2006-01-02 15:04:05",
+	TimeLayoutDay:   "2006-01-02",
+}
+
 // Строковые константы.
 var S = struct {
 	Panic   string
@@ -160,6 +168,7 @@ var S = struct {
 	ErrorSubquery          string
 	ErrorGraphCircle       string
 	ErrorUpdateMarkingLine string
+	ErrorNil               string
 }{
 	Panic:   "PANIC!",
 	Error:   "ERROR!",
@@ -254,6 +263,7 @@ var S = struct {
 	ErrorSubquery:          "Не удалось сделать подзапрос",
 	ErrorGraphCircle:       "Иерархия не может быть циклической",
 	ErrorUpdateMarkingLine: "При обновлении иерархии производственных линий произошла ошибка",
+	ErrorNil:               "Некорректные данные (nil)",
 }
 
 // Чтение json из файла.
@@ -262,6 +272,7 @@ func initFromFile(filename string, data interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, S.ErrorOpenFile+filename)
 	}
+	defer configFile.Close()
 	jsonParser := json.NewDecoder(configFile)
 	err = jsonParser.Decode(data)
 	if err != nil {

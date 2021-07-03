@@ -132,7 +132,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 		MinSize: dec.Size{550, 0},
 		Children: []dec.Widget{
 			dec.Composite{
-				Layout: dec.HBox{},
+				Layout: dec.HBox{MarginsZero: true},
 				Children: []dec.Widget{
 					dec.Label{
 						Text: "Название:",
@@ -165,11 +165,13 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 								return
 							}
 							lastLen := wf.modelTable.RowCount()
-							if wf.modelTable.items, err = SelectEntities(db, search.Title, search.Id, isChange); err != nil {
+							if items, err := SelectEntities(db, search.Title, search.Id, isChange); err != nil {
 								err = errors.Wrap(err, data.S.ErrorSubquery)
 								log.Println(data.S.Error, err)
 								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
+							} else {
+								wf.modelTable.items = items
 							}
 							nowLen := wf.modelTable.RowCount()
 							wf.modelTable.PublishRowsReset()
@@ -193,7 +195,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 				Model:   wf.modelTable,
 			},
 			dec.Composite{
-				Layout:  dec.HBox{},
+				Layout:  dec.HBox{MarginsZero: true},
 				Visible: isChange,
 				Children: []dec.Widget{
 					dec.PushButton{
@@ -232,7 +234,7 @@ func EntitiesRunDialog(owner walk.Form, db *sql.DB, isChange bool, idTitle *IdTi
 				},
 			},
 			dec.Composite{
-				Layout:  dec.HBox{},
+				Layout:  dec.HBox{MarginsZero: true},
 				Visible: !isChange,
 				Children: []dec.Widget{
 					dec.PushButton{

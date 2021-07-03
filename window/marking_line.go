@@ -3,7 +3,6 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -44,36 +43,36 @@ func SelectEntityRec(db *sql.DB) ([]*EntityRec, error) {
 
 // Выборка иерархических линий по составу сущностей.
 func SelectMarkingLineNow(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error) {
-	var MapIdToEntity map[int64]*Entity
+	var mapIdToEntity map[int64]*Entity
 	var MarkingLines []*MarkingLine
 	if err := (func() error {
 		entities, err := SelectEntities(db, "", 0, true)
 		if err != nil {
 			return err
 		}
-		MapIdToEntity = make(map[int64]*Entity, len(entities))
+		mapIdToEntity = make(map[int64]*Entity, len(entities))
 		MarkingLines = make([]*MarkingLine, 0, len(entities))
 		for _, val := range entities {
-			MapIdToEntity[val.Id] = val
+			mapIdToEntity[val.Id] = val
 		}
 		entityRec, err := SelectEntityRec(db)
 		if err != nil {
 			return err
 		}
 		for _, val := range entityRec {
-			MapIdToEntity[val.IdP].Children = append(MapIdToEntity[val.IdP].Children, &val.EntityRecChild)
+			mapIdToEntity[val.IdP].Children = append(mapIdToEntity[val.IdP].Children, &val.EntityRecChild)
 		}
-		for _, val := range MapIdToEntity {
+		for _, val := range mapIdToEntity {
 			if val.Type == 1 {
-				createLineRec([]IdCount{IdCount{Id: val.Id, Count: 1}}, val.Children, &MarkingLines, &MapIdToEntity)
+				createLineRec([]IdCount{IdCount{Id: val.Id, Count: 1}}, val.Children, &MarkingLines, &mapIdToEntity)
 				appendOrderDetail(&MarkingLines)
 			}
 		}
 		return nil
 	}()); err != nil {
-		return MarkingLines, MapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineNew)
+		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineNew)
 	}
-	return MarkingLines, MapIdToEntity, nil
+	return MarkingLines, mapIdToEntity, nil
 }
 
 // Добавление в список иерархических линий
@@ -111,16 +110,16 @@ func appendOrderDetail(MarkingLines *[]*MarkingLine) {
 }
 
 // Рекурсивная функция для построения иерархических линий.
-func createLineRec(hierarchy []IdCount, children []*EntityRecChild, MarkingLines *[]*MarkingLine, MapIdToEntity *map[int64]*Entity) {
+func createLineRec(hierarchy []IdCount, children []*EntityRecChild, MarkingLines *[]*MarkingLine, mapIdToEntity *map[int64]*Entity) {
 	for _, val := range children {
-		entityChild := (*MapIdToEntity)[val.Id]
+		entityChild := (*mapIdToEntity)[val.Id]
 		hierarchy2 := make([]IdCount, 0, 10)
 		hierarchy2 = append(hierarchy2, hierarchy...)
 		hierarchy2 = append(hierarchy2, IdCount{Id: val.Id, Count: val.Count})
 		if entityChild.Marking != MarkingNo {
 			*MarkingLines = append(*MarkingLines, &MarkingLine{Hierarchy: hierarchy2})
 		}
-		createLineRec(hierarchy2, entityChild.Children, MarkingLines, MapIdToEntity)
+		createLineRec(hierarchy2, entityChild.Children, MarkingLines, mapIdToEntity)
 	}
 }
 
@@ -156,7 +155,7 @@ func SelectMarkingLineEntity(db *sql.DB, id int64) (map[int8]*Entity, error) {
 // Выборка уже определенных иерархических линий.
 func SelectMarkingLineOld(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error) {
 	MarkingLines := make([]*MarkingLine, 0)
-	MapIdToEntity := make(map[int64]*Entity)
+	mapIdToEntity := make(map[int64]*Entity)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
@@ -184,14 +183,14 @@ func SelectMarkingLineOld(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 			for number := 1; number <= len(mapNumberToEntity); number++ {
 				entity := mapNumberToEntity[int8(number)]
 				MarkingLines[index].Hierarchy = append(MarkingLines[index].Hierarchy, IdCount{Id: entity.Id})
-				MapIdToEntity[entity.Id] = entity
+				mapIdToEntity[entity.Id] = entity
 			}
 		}
 		return nil
 	}()); err != nil {
-		return MarkingLines, MapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineOld)
+		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineOld)
 	}
-	return MarkingLines, MapIdToEntity, nil
+	return MarkingLines, mapIdToEntity, nil
 }
 
 // Обновление таблиц (Marking, MarkingLine) отвечающих за иерархию маркируемых деталей
@@ -211,15 +210,15 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 		return true
 	}
 	var now, old []*MarkingLine
-	var MapIdToEntityNow, MapIdToEntityOld map[int64]*Entity
-	var MapIdToMarkingLine map[int64]*MarkingLine
+	var mapIdToEntityNow, mapIdToEntityOld map[int64]*Entity
+	var mapIdToMarkingLine map[int64]*MarkingLine
 	var err error
 	if err = (func() error {
-		now, MapIdToEntityNow, err = SelectMarkingLineNow(db)
+		now, mapIdToEntityNow, err = SelectMarkingLineNow(db)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorRead)
 		}
-		old, MapIdToEntityOld, err = SelectMarkingLineOld(db)
+		old, mapIdToEntityOld, err = SelectMarkingLineOld(db)
 		if err != nil {
 			return errors.Wrap(err, data.S.ErrorRead)
 		}
@@ -249,14 +248,15 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 					if err != nil {
 						return errors.Wrap(err, data.S.ErrorInsertIndexLog)
 					}
-					for number, entityId := range valN.Hierarchy {
-						QwStr2 := data.InsertMarkingLine(now[j].Id, entityId.Id, int8(number+1))
+					for number, entityIdCount := range valN.Hierarchy {
+						QwStr2 := data.InsertMarkingLine(now[j].Id, entityIdCount.Id, int8(number+1))
 						if err := db.Ping(); err != nil {
 							return errors.Wrap(err, data.S.ErrorPingDB)
 						}
 						if _, err := db.Exec(QwStr2); err != nil {
 							return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
 						}
+						mapIdToEntityOld[entityIdCount.Id] = mapIdToEntityNow[entityIdCount.Id]
 					}
 					old = append(old, now[j])
 				}
@@ -270,80 +270,16 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 		log.Println(data.S.Error, err)
 		ErrorRunWindow(err.Error()) // GO-TO
 	}
-	MapIdToMarkingLine = make(map[int64]*MarkingLine, len(now))
+	mapIdToMarkingLine = make(map[int64]*MarkingLine, len(now))
 	for _, val := range now {
-		MapIdToMarkingLine[val.Id] = val
+		mapIdToMarkingLine[val.Id] = val
 	}
 	// fmt.Println(now)
 	// fmt.Println(old)
-	// fmt.Println(MapIdToEntityNow)
-	// fmt.Println(MapIdToMarkingLine)
+	// fmt.Println(mapIdToEntityNow)
+	// fmt.Println(mapIdToMarkingLine)
 	if isAllEntities {
-		return MapIdToMarkingLine, MapIdToEntityNow, err
+		return mapIdToMarkingLine, mapIdToEntityNow, err
 	}
-	return MapIdToMarkingLine, MapIdToEntityOld, err
-}
-
-type Map3 struct {
-	MapIdToMarkingLine map[int64]*MarkingLine
-	MapIdToEntity      map[int64]*Entity
-	MapIdToEntityType  map[int64]string
-}
-
-func (m *Map3) MarkingToString(id int64) string {
-	var s string
-	mline, ok := m.MapIdToMarkingLine[id]
-	if !ok {
-		log.Println(data.S.Warning, "В карте MapIdToMarkingLine не найдено значение ", id)
-		return ""
-	}
-	for _, val := range mline.Hierarchy {
-		s += fmt.Sprintf(" -> (%s x%d)", m.EntityToString(val.Id), val.Count)
-	}
-	return s[4:]
-}
-
-func (m *Map3) EntityToString(id int64) string {
-	e, ok := m.MapIdToEntity[id]
-	if !ok {
-		log.Println(data.S.Warning, "В карте MapIdToEntity не найдено значение ", id)
-		return ""
-	}
-	eType, ok := m.MapIdToEntityType[e.Type]
-	if !ok {
-		log.Println(data.S.Warning, "В карте MapIdToEntityType не найдено значение ", e.Type)
-		return ""
-	}
-	return fmt.Sprintf("%s %s", eType, e.Title)
-}
-
-func (m *Map3) Orders() []*IdTitle {
-	arr := make([]*IdTitle, 0, 20)
-	arr = append(arr, &IdTitle{})
-	for _, val := range m.MapIdToEntity {
-		if val.Type == 1 {
-			arr = append(arr, &IdTitle{Id: val.Id, Title: m.EntityToString(val.Id)})
-		}
-	}
-	return arr
-}
-
-func (m *Map3) MarkedDetails() []*IdTitle {
-	arr := make([]*IdTitle, 0, 20)
-	arr = append(arr, &IdTitle{})
-	for _, val := range m.MapIdToEntity {
-		if val.Marking != MarkingNo {
-			arr = append(arr, &IdTitle{Id: val.Id, Title: m.EntityToString(val.Id)})
-		}
-	}
-	return arr
-}
-
-func (m *Map3) MarkingLines() []*IdTitle {
-	arr := make([]*IdTitle, 0, 20)
-	arr = append(arr, &IdTitle{})
-	for _, val := range m.MapIdToMarkingLine {
-		arr = append(arr, &IdTitle{Id: val.Id, Title: m.MarkingToString(val.Id)})
-	}
-	return arr
+	return mapIdToMarkingLine, mapIdToEntityOld, err
 }

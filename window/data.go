@@ -81,18 +81,25 @@ func (m MarkingLine) String() string {
 // 	MarkingLines []*MarkingLine
 // }
 
-type MarkedDetail struct {
+type MarkedDetailMin struct {
 	Id      int64
 	Marking int64
 	Mark    string
-	Parent  struct {
-		Id      int64
-		Marking int64
-		Mark    string
-	}
+}
+
+type MarkedDetail struct {
+	MarkedDetailMin
+	Parent MarkedDetailMin
 }
 
 // Функция конвертирующая ошибки для показа пользователю.
 func MsgError(err error) string {
 	return strings.Replace(err.Error(), ": ", ":\n", -1)
+}
+
+func MaxInt(a, b int) int {
+	if a < b {
+		return b
+	}
+	return a
 }

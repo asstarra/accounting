@@ -204,14 +204,15 @@ func SelectMarkedDetail(markings []int64) string {
 		marking = marking[2:]
 	}
 	s := fmt.Sprintf("SELECT a.%s AS id, a.%s AS marking, a.%s AS mark, b.%s AS id, b.%s AS marking, b.%s AS mark"+
-		" FROM %s AS a LEFT JOIN %s AS b ON a.%s <=> b.%s;",
+		" FROM %s AS a LEFT JOIN %s AS b ON a.%s <=> b.%s",
 		dId, dMarking, dMark, dId, dMarking, dMark,
 		dTable.Name, dTable.Name, dParent, dId)
 	// s := fmt.Sprintf("SELECT %s AS id, %s AS marking, %s AS mark, %s AS perent FROM %s",
 	// 	dId, dMarking, dMark, dParent, dTable.Name)
 	if len(markings) != 0 {
-		s += fmt.Sprintf(" WHERE %s IN (%s)", dMarking, marking)
+		s += fmt.Sprintf(" WHERE a.%s IN (%s)", dMarking, marking)
 	}
+	// fmt.Println(s)
 	return s
 }
 
