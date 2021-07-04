@@ -20,6 +20,6 @@ func ErrorRunWindow(s string) {
 			},
 		},
 	}.Run()); err != nil {
-		log.Println(data.S.Error, errors.Wrap(err, data.S.ErrorCreateWindowErr+s))
+		log.Println(data.Log.Error, errors.Wrap(err, data.S.ErrorCreateWindowErr+s))
 	}
 }

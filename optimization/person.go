@@ -12,36 +12,88 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Структура для выборки данных из БД.
-type PersonTime struct {
-	Person int16     // Id человека.
-	Start  time.Time // Время начала временного промежутка.
-	Finish time.Time // Время окончания. День совпадает со временем начала,
-	// за исключением случая, когда заканчивается в 00:00:00 следующего дня.
-	Detail int64 // Id детали.
-	Number int32 // Номер операции.
+// Состояние, описывающее периоды.
+type StatePersonTime int8
+
+const (
+	PersonTimeWaitDB   = 1 // Считали из БД. Ждет.
+	PersonTimeWorkDB   = 2 // Считали из БД. Работает.
+	PersonTimeWaitNoDB = 3 // Есть изменения по сравнению с БД. Ждет.
+	PersonTimeWorkNoDB = 4 // Есть изменения по сравнению с БД. Работает.
+)
+
+// Ожидает ли рабочий в данный временной период.
+func (pt StatePersonTime) IsWait() bool {
+	return pt == PersonTimeWaitDB || pt == PersonTimeWaitNoDB
 }
 
-// Непрерывный период.
+// Структура для выборки непрерывных временных интервалов из БД.
+// Во время непрерывного интервала, человек не может отойти, а потом опять
+// вернуться к выполнению операции. У одной операции над деталью может быть
+// больше одного непрерывного временного интервала.
+type PersonTime struct {
+	Person int16           // Id рабочего.
+	Start  time.Time       // Время начала временного интервала.
+	Finish time.Time       // Время окончания временного интервала.
+	Detail int64           // Id детали.
+	Number int32           // Номер операции.
+	State  StatePersonTime // Статус.
+}
+
+// Считываем информацию о непрерывных интервалах рабочих из БД.
+func SelectPersonTime(db *sql.DB, Person *int16, Start, Finish *time.Time,
+	Detail, Entity *int64, Number *int32) ([]PersonTime, error) {
+	arr := make([]PersonTime, 0, 10)
+	if err := (func() error {
+		if err := db.Ping(); err != nil {
+			return errors.Wrap(err, data.S.ErrorPingDB)
+		}
+		QwStr := data.SelectPersonTime(Person, Start, Finish, Detail, Entity, Number)
+		rows, err := db.Query(QwStr)
+		if err != nil {
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			pt := PersonTime{}
+			var detail, entity sql.NullInt64
+			var number sql.NullInt32
+			var start, finish []uint8
+			err := rows.Scan(&pt.Person, &start, &finish, &detail, &entity, &number)
+			if err != nil {
+				return errors.Wrap(err, data.S.ErrorDecryptRow)
+			}
+			if pt.Start, err = time.Parse(data.TimeLayout.MySql, string(start)); err != nil {
+				return errors.Wrapf(err, data.S.ErrorDecryptTime, string(start))
+			}
+			if pt.Finish, err = time.Parse(data.TimeLayout.MySql, string(finish)); err != nil {
+				return errors.Wrapf(err, data.S.ErrorDecryptTime, string(finish))
+			}
+			if detail.Valid && entity.Valid && number.Valid {
+				pt.Detail, pt.Number, pt.State = detail.Int64, number.Int32, PersonTimeWorkDB
+			} else {
+				pt.State = PersonTimeWaitDB
+			}
+			arr = append(arr, pt)
+		}
+		return nil
+	}()); err != nil {
+		return arr, data.Wrapf(err, data.Log.InSelectPersonTime,
+			Person, Start, Finish, Detail, Entity, Number)
+	}
+	return arr, nil
+}
+
+// Непрерывный временной интервал.
 type Period struct {
 	Start  time.Time // Начало.
 	Finish time.Time // Конец.
 }
 
-// Продолжительность периода.
+// Продолжительность непрерывного временного интервала.
 func (p Period) Duration() int32 {
 	return int32(p.Finish.Sub(p.Start).Seconds())
 }
-
-// Состояние
-type ValidPersonTime int8
-
-const (
-	Wait   = 0 // Считали из БД. Ждет.
-	InDB   = 1 // Считали из БД. Работает.
-	GoWait = 2 // Есть изменения по сравнению с БД. Ждет.
-	GoWork = 3 // Есть изменения по сравнению с БД. Работает.
-)
 
 // Период, над одной операцией.
 type PeriodLisp struct {
@@ -49,12 +101,12 @@ type PeriodLisp struct {
 	Person   int16           // Ид человека +
 	Detail   int64           // Ид Детали +
 	Number   int32           // Номер операции. +
-	Valid    ValidPersonTime // Состояние +
+	Valid    StatePersonTime // Состояние +
 	Lisp     []Period        // Список непрерывных временных отрезков. +
 }
 
 // Разбиваем период на части и выделяем интервал,
-// когда человек работает над данной деталью.
+// когда человек работает над данной деталью. // GO-TO возможно заменить окончание на продолжительность.
 func (pl *PeriodLisp) Change(start, finish time.Time, det *DetailDB) []*PeriodLisp {
 	begin := make([]Period, 0, 10)
 	medium := make([]Period, 0, 10)
@@ -117,7 +169,7 @@ func (pl *PeriodLisp) Change(start, finish time.Time, det *DetailDB) []*PeriodLi
 			Person:   pl.Person,
 			Detail:   0,
 			Number:   0,
-			Valid:    GoWait,
+			Valid:    PersonTimeWaitNoDB,
 			Lisp:     begin,
 		})
 	}
@@ -126,7 +178,7 @@ func (pl *PeriodLisp) Change(start, finish time.Time, det *DetailDB) []*PeriodLi
 		Person:   pl.Person,
 		Detail:   det.Id,
 		Number:   det.Way[det.NowStage].OperationNumber,
-		Valid:    GoWork,
+		Valid:    PersonTimeWorkNoDB,
 		Lisp:     medium,
 	})
 	if len(end) != 0 {
@@ -135,14 +187,14 @@ func (pl *PeriodLisp) Change(start, finish time.Time, det *DetailDB) []*PeriodLi
 			Person:   pl.Person,
 			Detail:   0,
 			Number:   0,
-			Valid:    GoWait,
+			Valid:    PersonTimeWaitNoDB,
 			Lisp:     end,
 		})
 	}
 	return pl2
 }
 
-// Возращаем время окончания.
+// По известному началу и продолжительности возращаем время окончания.
 func (pl *PeriodLisp) GetFinish(start time.Time, duration int32) (time.Time, bool) {
 	for i := 0; i < len(pl.Lisp); i++ {
 		pi := pl.Lisp[i]
@@ -165,7 +217,7 @@ func (pl *PeriodLisp) GetFinish(start time.Time, duration int32) (time.Time, boo
 	return start, false
 }
 
-// Возращаем время начала.
+// По известному окончанию и продолжительности возращаем время начала.
 func (pl *PeriodLisp) GetStart(finish time.Time, duration int32) (time.Time, bool) {
 	for i := len(pl.Lisp) - 1; i >= 0; i-- {
 		pi := pl.Lisp[i]
@@ -188,7 +240,7 @@ func (pl *PeriodLisp) GetStart(finish time.Time, duration int32) (time.Time, boo
 	return finish, false
 }
 
-// Возращаем продолжительность.
+// По известному началу и окончанию возращаем продолжительность.
 func (pl *PeriodLisp) GetDuration(start, finish time.Time) int32 {
 	var duration int32 = 0
 	for i := 0; i < len(pl.Lisp); i++ {
@@ -214,45 +266,6 @@ func (pl *PeriodLisp) GetDuration(start, finish time.Time) int32 {
 type PersonDB struct {
 	Id        int16         // Ид человека.
 	TimeTable []*PeriodLisp // Расписание.
-}
-
-// Считываем информацию о расписании одного человека из БД.
-func SelectPersonTime(db *sql.DB, Person *int16, Start, Finish *time.Time,
-	Detail, Entity *int64, Number *int32) ([]PersonTime, error) {
-	arr := make([]PersonTime, 0, 10)
-	if err := (func() error {
-		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
-		}
-		QwStr := data.SelectPersonTime(Person, Start, Finish, Detail, Entity, Number)
-		rows, err := db.Query(QwStr)
-		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			pt := PersonTime{}
-			var detail, entity sql.NullInt64
-			var number sql.NullInt32
-			var start, finish []uint8
-			err := rows.Scan(&pt.Person, &start, &finish, &detail, &entity, &number)
-			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
-			}
-			if pt.Start, err = time.Parse(data.C.TimeLayoutMySql, string(start)); err != nil {
-				return err // GO-TO error
-			}
-			if pt.Finish, err = time.Parse(data.C.TimeLayoutMySql, string(finish)); err != nil {
-				return err // GO-TO error
-			}
-			pt.Detail, pt.Number = detail.Int64, number.Int32
-			arr = append(arr, pt)
-		}
-		return nil
-	}()); err != nil {
-		return arr, errors.Wrapf(err, "In SelectPersonTime") //GO-TO строка
-	}
-	return arr, nil
 }
 
 // Считываем расписание всех людей из БД.
@@ -283,7 +296,8 @@ func SelectPerson(db *sql.DB, startPtr, finishPtr *time.Time) (map[int16]*Person
 			for i := 0; i < len(pt); {
 				var j int
 				for j = i + 1; j < len(pt); j++ {
-					if pt[i].Detail != pt[j].Detail || pt[i].Number != pt[j].Number {
+					if pt[i].State != pt[j].State || pt[i].Detail != pt[j].Detail ||
+						pt[i].Number != pt[j].Number {
 						break
 					}
 				}
@@ -292,10 +306,7 @@ func SelectPerson(db *sql.DB, startPtr, finishPtr *time.Time) (map[int16]*Person
 					Detail: pt[i].Detail,
 					Number: pt[i].Number,
 					Lisp:   make([]Period, 0, j-i),
-					Valid:  Wait,
-				}
-				if pl.Detail != 0 || pl.Number != 0 {
-					pl.Valid = InDB
+					Valid:  pt[i].State,
 				}
 				duration := 0.0
 				for k := i; k < j; k++ {
@@ -310,7 +321,7 @@ func SelectPerson(db *sql.DB, startPtr, finishPtr *time.Time) (map[int16]*Person
 		}
 		return nil
 	}()); err != nil {
-		return make(map[int16]*PersonDB, 0), errors.Wrapf(err, "In SelectPerson") //GO-TO строка
+		return make(map[int16]*PersonDB, 0), data.Wrapf(err, data.Log.InSelectPerson, startPtr, finishPtr)
 	}
 	mp := make(map[int16]*PersonDB, len(arr))
 	for i, person := range arr {
@@ -335,11 +346,11 @@ type PeriodChoose struct {
 	Finish time.Time   // Окончание периода для данной детали.
 }
 
-// Выбираем допустимые периоды для конкретной операции над определенной деталью.
+// Выбираем допустимые периоды у данного рабочего для текущей операции над определенной деталью.
 func (p *PersonDB) GetPeriod(det *DetailDB) []PeriodChoose {
 	arr := make([]PeriodChoose, 0, len(p.TimeTable))
 	for i, val := range p.TimeTable {
-		if val.Valid == Wait {
+		if val.Valid.IsWait() {
 			if finish, ok := val.GetFinish(det.NowTime(), det.NowDuration()); ok {
 				arr = append(arr, PeriodChoose{
 					PL:     val,

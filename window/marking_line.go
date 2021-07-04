@@ -3,6 +3,8 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
+
+	// "fmt"
 	"log"
 
 	"github.com/pkg/errors"
@@ -21,7 +23,7 @@ func SelectEntityRec(db *sql.DB) ([]*EntityRec, error) {
 		QwStr := data.SelectEntityRec()
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var e_type, title string
@@ -36,7 +38,7 @@ func SelectEntityRec(db *sql.DB) ([]*EntityRec, error) {
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.S.InSelectEntityRec)
+		return arr, errors.Wrapf(err, data.Log.InSelectEntityRec)
 	}
 	return arr, nil
 }
@@ -70,7 +72,7 @@ func SelectMarkingLineNow(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		}
 		return nil
 	}()); err != nil {
-		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineNew)
+		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineNew)
 	}
 	return MarkingLines, mapIdToEntity, nil
 }
@@ -133,7 +135,7 @@ func SelectMarkingLineEntity(db *sql.DB, id int64) (map[int8]*Entity, error) {
 		}
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -147,7 +149,7 @@ func SelectMarkingLineEntity(db *sql.DB, id int64) (map[int8]*Entity, error) {
 		}
 		return nil
 	}()); err != nil {
-		return mapNumberToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineEntity, id)
+		return mapNumberToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineEntity, id)
 	}
 	return mapNumberToEntity, nil
 }
@@ -163,7 +165,7 @@ func SelectMarkingLineOld(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		QwStr := data.SelectMarking()
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -188,7 +190,7 @@ func SelectMarkingLineOld(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		}
 		return nil
 	}()); err != nil {
-		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.S.InSelectMarkingLineOld)
+		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineOld)
 	}
 	return MarkingLines, mapIdToEntity, nil
 }
@@ -242,7 +244,7 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 					}
 					result, err := db.Exec(QwStr)
 					if err != nil {
-						return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+						return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
 					}
 					now[j].Id, err = result.LastInsertId()
 					if err != nil {
@@ -254,7 +256,7 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 							return errors.Wrap(err, data.S.ErrorPingDB)
 						}
 						if _, err := db.Exec(QwStr2); err != nil {
-							return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+							return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
 						}
 						mapIdToEntityOld[entityIdCount.Id] = mapIdToEntityNow[entityIdCount.Id]
 					}
@@ -267,7 +269,7 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 		return errors.Wrap(err, data.S.ErrorUpdate)
 	}()); err != nil {
 		err = errors.Wrap(err, data.S.ErrorUpdateMarkingLine)
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		ErrorRunWindow(err.Error()) // GO-TO
 	}
 	mapIdToMarkingLine = make(map[int64]*MarkingLine, len(now))

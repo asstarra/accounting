@@ -21,7 +21,7 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 		QwStr := data.SelectType(tableName)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -35,7 +35,7 @@ func SelectIdTitle(db *sql.DB, tableName string) ([]*IdTitle, map[int64]string, 
 		}
 		return nil
 	}()); err != nil {
-		err = errors.Wrapf(err, data.S.InSelectIdTitle, tableName)
+		err = errors.Wrapf(err, data.Log.InSelectIdTitle, tableName)
 	}
 	return arr, m, nil
 }
@@ -77,18 +77,18 @@ func (m *modelTypeComponent) Value(row, col int) interface{} {
 	case 0:
 		return item.Title
 	}
-	log.Println(data.S.Panic, data.S.ErrorUnexpectedColumn)
+	log.Println(data.Log.Panic, data.S.ErrorUnexpectedColumn)
 	panic(data.S.ErrorUnexpectedColumn)
 }
 
 // Описание и запуск диалогового окна.
 func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
-	log.Printf(data.S.BeginWindow, data.S.Type)
+	log.Printf(data.Log.BeginWindow, data.Log.Type)
 	wf, err := newWindowsFormType(db, tableName)
 	if err != nil {
 		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
-	log.Printf(data.S.InitWindow, data.S.Type)
+	log.Printf(data.Log.InitWindow, data.Log.Type)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingType,
@@ -102,7 +102,7 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 							dec.TableView{
 								AssignTo: &wf.tv,
 								Columns: []dec.TableViewColumn{
-									{Title: "Название"},
+									{Title: "Название"}, //GO-TO
 								},
 								MinSize: dec.Size{120, 0},
 								Model:   wf.modelTable,
@@ -120,10 +120,10 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 							dec.PushButton{
 								Text: data.S.ButtonAdd,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogAdd)
+									log.Println(data.Log.Info, data.Log.LogAdd)
 									if err := wf.add(db, tableName); err != nil {
 										err = errors.Wrap(err, data.S.ErrorAddRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -131,10 +131,10 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 							dec.PushButton{
 								Text: data.S.ButtonChange,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogChange)
+									log.Println(data.Log.Info, data.Log.LogChange)
 									if err := wf.change(db, tableName); err != nil {
 										err = errors.Wrap(err, data.S.ErrorChangeRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -142,10 +142,10 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 							dec.PushButton{
 								Text: data.S.ButtonDelete,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogDelete)
+									log.Println(data.Log.Info, data.Log.LogDelete)
 									if err := wf.delete(db, tableName); err != nil {
 										err = errors.Wrap(err, data.S.ErrorDeleteRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -159,9 +159,9 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Printf(data.S.CreateWindow, data.S.Type)
+	log.Printf(data.Log.CreateWindow, data.Log.Type)
 
-	log.Printf(data.S.RunWindow, data.S.Type)
+	log.Printf(data.Log.RunWindow, data.Log.Type)
 	return wf.Run(), nil
 }
 
@@ -179,10 +179,10 @@ func (wf windowsFormType) add(db *sql.DB, tableName string) error {
 	}
 	result, err := db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+		return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
 	}
 	if row.Id, err = result.LastInsertId(); err != nil {
-		log.Println(data.S.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
+		log.Println(data.Log.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
 		walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
 		row.Id = 0
 	}
@@ -214,7 +214,7 @@ func (wf windowsFormType) change(db *sql.DB, tableName string) error {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
 	if _, err := db.Exec(QwStr); err != nil {
-		return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
+		return errors.Wrapf(err, data.S.ErrorChangeDB, QwStr)
 	}
 	wf.modelTable.items[index].Title = wf.textW.Text()
 	wf.textW.SetText("")
@@ -236,7 +236,7 @@ func (wf windowsFormType) delete(db *sql.DB, tableName string) error {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
 	if _, err := db.Exec(QwStr); err != nil {
-		return errors.Wrap(err, data.S.ErrorDeleteDB+QwStr)
+		return errors.Wrapf(err, data.S.ErrorDeleteDB, QwStr)
 	}
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1
 	wf.modelTable.items = wf.modelTable.items[:index+copy(wf.modelTable.items[index:], wf.modelTable.items[index+1:])]

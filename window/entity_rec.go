@@ -18,10 +18,10 @@ type windowsFormEntityRec struct {
 
 // Описание и запуск диалогового окна.
 func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *EntityRecChild) (int, error) {
-	log.Printf(data.S.BeginWindow, data.S.EntityRec)
+	log.Printf(data.Log.BeginWindow, data.Log.EntityRec)
 	var databind *walk.DataBinder
 	wf := windowsFormEntityRec{}
-	log.Printf(data.S.InitWindow, data.S.EntityRec)
+	log.Printf(data.Log.InitWindow, data.Log.EntityRec)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingEntityRec,
@@ -45,13 +45,13 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 						MinSize:  dec.Size{150, 10},
 						Text:     child.Title,
 						OnClicked: func() {
-							log.Println(data.S.Info, data.S.LogChoose)
+							log.Println(data.Log.Info, data.Log.LogChoose)
 							if err := (func() error {
 								idTitle := child.IdTitle
 								cmd, err := EntitiesRunDialog(wf, db, false, &idTitle)
-								log.Printf(data.S.EndWindow, data.S.Entities, cmd)
+								log.Printf(data.Log.EndWindow, data.Log.Entities, cmd)
 								if err != nil {
-									return errors.Wrapf(err, data.S.InEntitiesRunDialog, false, idTitle)
+									return errors.Wrapf(err, data.Log.InEntitiesRunDialog, false, idTitle)
 								}
 								if cmd == walk.DlgCmdOK {
 									child.IdTitle = idTitle
@@ -60,7 +60,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 								return nil
 							}()); err != nil {
 								err = errors.Wrap(err, data.S.ErrorChoose)
-								log.Println(data.S.Error, err)
+								log.Println(data.Log.Error, err)
 								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
@@ -82,10 +82,10 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 					dec.PushButton{
 						Text: data.S.ButtonOK,
 						OnClicked: func() {
-							log.Println(data.S.Info, data.S.LogOk)
+							log.Println(data.Log.Info, data.Log.LogOk)
 							if err := databind.Submit(); err != nil {
 								err = errors.Wrap(err, data.S.ErrorSubmit)
-								log.Println(data.S.Error, err)
+								log.Println(data.Log.Error, err)
 								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
@@ -95,7 +95,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 					dec.PushButton{
 						Text: data.S.ButtonCansel,
 						OnClicked: func() {
-							log.Println(data.S.Info, data.S.LogCansel)
+							log.Println(data.Log.Info, data.Log.LogCansel)
 							wf.Cancel()
 						},
 					},
@@ -106,8 +106,8 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Printf(data.S.CreateWindow, data.S.EntityRec)
+	log.Printf(data.Log.CreateWindow, data.Log.EntityRec)
 
-	log.Printf(data.S.RunWindow, data.S.EntityRec)
+	log.Printf(data.Log.RunWindow, data.Log.EntityRec)
 	return wf.Run(), nil
 }

@@ -1,6 +1,7 @@
 package data
 
 import (
+	// "database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -67,25 +68,21 @@ var Icon = struct {
 	Info:     walk.MsgBoxIconInformation,
 }
 
-var C = struct {
-	TimeLayoutMySql string
-	TimeLayoutDay   string
+var TimeLayout = struct {
+	MySql string
+	Day   string
 }{
-	TimeLayoutMySql: "2006-01-02 15:04:05",
-	TimeLayoutDay:   "2006-01-02",
+	MySql: "2006-01-02 15:04:05",
+	Day:   "2006-01-02",
 }
 
-// Строковые константы.
-var S = struct {
+// Содержит строковые константы для логов.
+var Log = struct {
 	Panic   string
 	Error   string
 	Warning string
 	Info    string
 	Debug   string
-
-	MsgBoxError   string
-	MsgBoxWarning string
-	MsgBoxInfo    string
 
 	BeginWindow  string
 	InitWindow   string
@@ -100,13 +97,6 @@ var S = struct {
 	MarkedDetail  string
 	MarkedDetails string
 
-	HeadingEntity        string
-	HeadingEntities      string
-	HeadingEntityRec     string
-	HeadingType          string
-	HeadingMarkedDetail  string
-	HeadingMarkedDetails string
-
 	LogOk     string
 	LogCansel string
 	LogAdd    string
@@ -114,13 +104,6 @@ var S = struct {
 	LogDelete string
 	LogChoose string
 	LogSearch string
-
-	ButtonOK     string
-	ButtonCansel string
-	ButtonAdd    string
-	ButtonChange string
-	ButtonDelete string
-	ButtonSearch string
 
 	InEntitiesRunDialog       string
 	InEntityRunDialog         string
@@ -135,8 +118,84 @@ var S = struct {
 	InSelectMarkingLineNew    string
 	InSelectMarkingLineOld    string
 	InSelectMarkingLineEntity string
-	InSelectMarkedDetail      string
 	InSelectMarkedDetails     string
+
+	InSelectPersonTime      string
+	InSelectPerson          string
+	InSelectDays            string
+	InSelectId16            string
+	InSelectQualification   string
+	InNewQualificationTable string
+}{
+	Panic:   "PANIC!",
+	Error:   "ERROR!",
+	Warning: "WARNING!",
+	Info:    "INFO:",
+	Debug:   "DEBUG:",
+
+	BeginWindow:  "INFO: BEGIN window %s",
+	InitWindow:   "INFO: INIT window %s",
+	CreateWindow: "INFO: CREATE window %s",
+	RunWindow:    "INFO: RUN window %s",
+	EndWindow:    "INFO: END window %s, cmd %v",
+
+	Entity:        "ENTITY",
+	Entities:      "ENTITIES",
+	EntityRec:     "ENTITY_REC",
+	Type:          "TYPE",
+	MarkedDetail:  "MARKED_DETAIL",
+	MarkedDetails: "MARKED_DETAILS",
+
+	LogOk:     "Ok",
+	LogCansel: "Cansel",
+	LogAdd:    "Add",
+	LogChange: "Change",
+	LogDelete: "Delete",
+	LogChoose: "Choose",
+	LogSearch: "Search",
+
+	InEntitiesRunDialog:       "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
+	InEntityRunDialog:         "In EntityRunDialog(entity = %v)",
+	InEntityRecRunDialog:      "In EntityRecRunDialog(child = %v)",
+	InTypeRunDialog:           "In TypeRunDialog(tableName = %s)",
+	InMarkedDetailRunDialog:   "In MarkedDetailRunDialog(detail = %v)",
+	InMarkedDetailsRunDialog:  "In MarkedDetailsRunDialog(isChage = %t, parent detail = %v)",
+	InSelectEntities:          "In SelectEntities(title = \"%s\", entityType = %d)",
+	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
+	InSelectEntityRec:         "In SelectEntityRec()",
+	InSelectIdTitle:           "In SelectIdTitle(tableName = %s)",
+	InSelectMarkingLineNew:    "In SelectMarkingLineNew()",
+	InSelectMarkingLineOld:    "In SelectMarkingLineOld()",
+	InSelectMarkingLineEntity: "In SelectMarkingLineEntity(id = %d)",
+	InSelectMarkedDetails:     "In SelectMarkedDetails(marking = %v)",
+
+	InSelectPersonTime:      "In SelectPersonTime(person = %s, start = %s, finish = %s, detail = %s, entity = %s, number = %s)",
+	InSelectPerson:          "In SelectPerson(start = %s, finish = %s)",
+	InSelectDays:            "In SelectDays(start = %s, finish = %s)",
+	InSelectId16:            "In SelectId16(tableName = %s)",
+	InSelectQualification:   "In SelectQualification()",
+	InNewQualificationTable: "In NewQualificationTable()",
+}
+
+// Строковые переменные.
+var S = struct {
+	MsgBoxError   string
+	MsgBoxWarning string
+	MsgBoxInfo    string
+
+	HeadingEntity        string
+	HeadingEntities      string
+	HeadingEntityRec     string
+	HeadingType          string
+	HeadingMarkedDetail  string
+	HeadingMarkedDetails string
+
+	ButtonOK     string
+	ButtonCansel string
+	ButtonAdd    string
+	ButtonChange string
+	ButtonDelete string
+	ButtonSearch string
 
 	MsgChooseRow  string
 	MsgEmptyTitle string
@@ -156,6 +215,7 @@ var S = struct {
 	ErrorChangeDB          string
 	ErrorDeleteDB          string
 	ErrorDecryptRow        string
+	ErrorDecryptTime       string
 	ErrorAddRow            string
 	ErrorChangeRow         string
 	ErrorDeleteRow         string
@@ -170,28 +230,10 @@ var S = struct {
 	ErrorUpdateMarkingLine string
 	ErrorNil               string
 }{
-	Panic:   "PANIC!",
-	Error:   "ERROR!",
-	Warning: "WARNING!",
-	Info:    "INFO:",
-	Debug:   "DEBUG:",
 
 	MsgBoxError:   "Ошибка!",
 	MsgBoxWarning: "Внимание!",
 	MsgBoxInfo:    "Информация",
-
-	BeginWindow:  "INFO: BEGIN window %s",
-	InitWindow:   "INFO: INIT window %s",
-	CreateWindow: "INFO: CREATE window %s",
-	RunWindow:    "INFO: RUN window %s",
-	EndWindow:    "INFO: END window %s, cmd %v",
-
-	Entity:        "ENTITY",
-	Entities:      "ENTITIES",
-	EntityRec:     "ENTITY_REC",
-	Type:          "TYPE",
-	MarkedDetail:  "MARKED_DETAIL",
-	MarkedDetails: "MARKED_DETAILS",
 
 	HeadingEntity:        "Учет - Сущность",
 	HeadingEntities:      "Учет - Сущности",
@@ -200,36 +242,12 @@ var S = struct {
 	HeadingMarkedDetail:  "Учет - Маркировка детали",
 	HeadingMarkedDetails: "Учет - Список деталей",
 
-	LogOk:     "Ok",
-	LogCansel: "Cansel",
-	LogAdd:    "Add",
-	LogChange: "Change",
-	LogDelete: "Delete",
-	LogChoose: "Choose",
-	LogSearch: "Search",
-
 	ButtonOK:     "OK",
 	ButtonCansel: "Отмена",
 	ButtonAdd:    "Добавить",
 	ButtonChange: "Изменить",
 	ButtonDelete: "Удалить",
 	ButtonSearch: "Поиск",
-
-	InEntitiesRunDialog:       "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
-	InEntityRunDialog:         "In EntityRunDialog(entity = %v)",
-	InEntityRecRunDialog:      "In EntityRecRunDialog(child = %v)",
-	InTypeRunDialog:           "In TypeRunDialog(tableName = %s)",
-	InMarkedDetailRunDialog:   "In MarkedDetailRunDialog(detail = %v)",
-	InMarkedDetailsRunDialog:  "In MarkedDetailsRunDialog(isChage = %t, parent detail = %v)",
-	InSelectEntities:          "In SelectEntities(title = \"%s\", entityType = %d)",
-	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
-	InSelectEntityRec:         "In SelectEntityRec()",
-	InSelectIdTitle:           "In SelectIdTitle(tableName = %s)",
-	InSelectMarkingLineNew:    "In SelectMarkingLineNew()",
-	InSelectMarkingLineOld:    "In SelectMarkingLineOld()",
-	InSelectMarkingLineEntity: "In SelectMarkingLineEntity(id = %d)",
-	InSelectMarkedDetail:      "",
-	InSelectMarkedDetails:     "In SelectMarkedDetails(marking = %v)",
 
 	MsgChooseRow:  "Выберите строчку",
 	MsgEmptyTitle: "Название не может состоять из пустой строки",
@@ -244,11 +262,12 @@ var S = struct {
 	ErrorInit:             "Ошибка инициализации",
 	ErrorOpedDB:           "Не удалось открыть соединение к базе данных",
 	ErrorPingDB:           "Не удалось подключится к базе данных",
-	ErrorQueryDB:          "Ошибка запроса к базе данных.\nСтрока запроса = ",
-	ErrorAddDB:            "Не удалось добавить строку в базу данных.\nСтрока запроса = ",
-	ErrorChangeDB:         "Не удалось изменить строку в базе данных.\nСтрока запроса = ",
-	ErrorDeleteDB:         "Не удалось удалить строку из базы данных.\nСтрока запроса = ",
+	ErrorQueryDB:          "Ошибка запроса к базе данных.\nСтрока запроса = \"%s\"",
+	ErrorAddDB:            "Не удалось добавить строку в базу данных.\nСтрока запроса = \"%s\"",
+	ErrorChangeDB:         "Не удалось изменить строку в базе данных.\nСтрока запроса = \"%s\"",
+	ErrorDeleteDB:         "Не удалось удалить строку из базы данных.\nСтрока запроса = \"%s\"",
 	ErrorDecryptRow:       "Не удалось расшифровать строку",
+	ErrorDecryptTime:      "Не удалось расшифровать время. Строка = \"%s\"",
 	ErrorAddRow:           "Не удалось добавить строку",
 	ErrorChangeRow:        "Не удалось изменить строку",
 	ErrorDeleteRow:        "Не удалось удалить строку",
@@ -287,13 +306,13 @@ func Init() error {
 	if err != nil {
 		return err
 	}
-	log.Println(S.Debug, "InitDatabase")
+	log.Println(Log.Debug, "InitDatabase")
 	err = initFromFile("config/table.json", &Tab)
 	if err != nil {
 		return err
 	}
-	log.Println(S.Debug, "InitTables")
+	log.Println(Log.Debug, "InitTables")
 	initRegister()
-	log.Println(S.Debug, "InitRegister")
+	log.Println(Log.Debug, "InitRegister")
 	return nil
 }

@@ -67,7 +67,7 @@ func SelectRouteSheet(vEntity *int64, vNumber, vDuration *int32, vOperation *int
 	if vNumber != nil {
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sNumber, *vNumber))
 	}
-	if vDuration != nil {
+	if vDuration != nil { // GO-TO поменять на больше/меньше ???
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sDuration, *vDuration))
 	}
 	if vOperation != nil {
@@ -80,7 +80,7 @@ func SelectRouteSheet(vEntity *int64, vNumber, vDuration *int32, vOperation *int
 	return Merger(strArr)
 }
 
-func SelectDetail(vId, vEntity *int64, vState *int8, vStart, vFinish *time.Time, vParent *sql.NullInt64) string { // GO-TO start/finish
+func SelectDetail(vId, vEntity *int64, vState *int8, vStart, vFinish *time.Time, vParent *sql.NullInt64) string {
 	table := Tab["Detail"]
 	sId := table.Columns["Id"].Name
 	sEntity := table.Columns["Entity"].Name
@@ -101,17 +101,13 @@ func SelectDetail(vId, vEntity *int64, vState *int8, vStart, vFinish *time.Time,
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sState, *vState))
 	}
 	if vStart != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, *vStart))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, ToStr(vStart)))
 	}
 	if vFinish != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, *vFinish))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, ToStr(vFinish)))
 	}
 	if vParent != nil {
-		strParent := "NULL"
-		if vParent.Valid {
-			strParent = fmt.Sprint(vParent.Int64)
-		}
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sParent, strParent))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sParent, ToStr(vParent)))
 	}
 	return Merger(strArr)
 }
@@ -132,10 +128,10 @@ func SelectPersonTime(vPerson *int16, vStart, vFinish *time.Time, vDetail, vEnti
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sPerson, *vPerson))
 	}
 	if vStart != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, *vStart))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, ToStr(vStart)))
 	}
 	if vFinish != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, *vFinish))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, ToStr(vFinish)))
 	}
 	if vDetail != nil {
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sDetail, *vDetail))

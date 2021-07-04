@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
 	//"log"
-	"github.com/pkg/errors"
+	// "github.com/pkg/errors"
 )
 
 // Первод int32 (количество секунд) в тип time.Duration.
@@ -22,7 +21,7 @@ func AddDur(start time.Time, second int32) time.Time {
 
 // Округляем дату и время до того же дня и время = 00:00:00.
 func ClearClock(t time.Time) time.Time {
-	t2, _ := time.Parse(data.C.TimeLayoutDay, t.Format(data.C.TimeLayoutDay))
+	t2, _ := time.Parse(data.TimeLayout.Day, t.Format(data.TimeLayout.Day))
 	return t2
 }
 
@@ -44,8 +43,8 @@ type Day struct {
 
 func (d Day) String() string {
 	return fmt.Sprintf("S=%s, F=%s, Sn=%s, Fn=%s, %d, %d, %d\n",
-		d.StartMin.Format(data.C.TimeLayoutMySql), d.FinishMax.Format(data.C.TimeLayoutMySql),
-		d.StartMean.Format(data.C.TimeLayoutMySql), d.FinishMean.Format(data.C.TimeLayoutMySql),
+		d.StartMin.Format(data.TimeLayout.MySql), d.FinishMax.Format(data.TimeLayout.MySql),
+		d.StartMean.Format(data.TimeLayout.MySql), d.FinishMean.Format(data.TimeLayout.MySql),
 		d.Duration, d.FreeDuration, d.CountPerson)
 }
 
@@ -121,7 +120,7 @@ func SelectDays(db *sql.DB, startPtr, finishPtr *time.Time) (Timetable, error) {
 		}
 		return nil
 	}()); err != nil {
-		return Timetable{}, errors.Wrapf(err, "In SelectDays") //GO-TO строка
+		return Timetable{}, data.Wrapf(err, data.Log.InSelectDays, startPtr, finishPtr)
 	}
 	var dur int32 = 0
 	for _, val := range arr {

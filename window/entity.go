@@ -3,6 +3,8 @@ package window
 import (
 	"accounting/data"
 	"database/sql"
+
+	// "fmt"
 	"log"
 
 	"github.com/lxn/walk"
@@ -22,7 +24,7 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 		QwStr := data.SelectEntityRecChild(parent)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var e_type, title string
@@ -37,7 +39,7 @@ func SelectEntityRecChild(db *sql.DB, parent int64) ([]*EntityRecChild, error) {
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.S.InSelectEntityRecChild, parent)
+		return arr, errors.Wrapf(err, data.Log.InSelectEntityRecChild, parent)
 	}
 	return arr, nil
 }
@@ -83,20 +85,20 @@ func (m *modelEntityComponent) Value(row, col int) interface{} {
 	case 1:
 		return item.Count
 	}
-	log.Println(data.S.Panic, data.S.ErrorUnexpectedColumn)
+	log.Println(data.Log.Panic, data.S.ErrorUnexpectedColumn)
 	panic(data.S.ErrorUnexpectedColumn)
 }
 
 // Описание и запуск диалогового окна.
 func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
-	log.Printf(data.S.BeginWindow, data.S.Entity)
+	log.Printf(data.Log.BeginWindow, data.Log.Entity)
 	sButtonAdd := " компонент" // GO-TO возможно нужно? вынести строку
 	var databind *walk.DataBinder
 	wf, err := newWindowsFormEntity(db, entity)
 	if err != nil {
 		return 0, errors.Wrap(err, data.S.ErrorInit)
 	}
-	log.Printf(data.S.InitWindow, data.S.Entity)
+	log.Printf(data.Log.InitWindow, data.Log.Entity)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
 		Title:    data.S.HeadingEntity,
@@ -186,10 +188,10 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								ColumnSpan: 2,
 								Text:       data.S.ButtonAdd + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogAdd)
+									log.Println(data.Log.Info, data.Log.LogAdd)
 									if err := wf.add(db, entity); err != nil {
 										err = errors.Wrap(err, data.S.ErrorAddRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -198,10 +200,10 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								ColumnSpan: 2,
 								Text:       data.S.ButtonChange + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogChange)
+									log.Println(data.Log.Info, data.Log.LogChange)
 									if err := wf.change(db, entity); err != nil {
 										err = errors.Wrap(err, data.S.ErrorChangeRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -210,10 +212,10 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								ColumnSpan: 2,
 								Text:       data.S.ButtonDelete + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogDelete)
+									log.Println(data.Log.Info, data.Log.LogDelete)
 									if err := wf.delete(db, entity); err != nil {
 										err = errors.Wrap(err, data.S.ErrorDeleteRow)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
@@ -222,10 +224,10 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							dec.PushButton{
 								Text: data.S.ButtonOK,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogOk)
+									log.Println(data.Log.Info, data.Log.LogOk)
 									if err := databind.Submit(); err != nil {
 										err = errors.Wrap(err, data.S.ErrorSubmit)
-										log.Println(data.S.Error, err)
+										log.Println(data.Log.Error, err)
 										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
 										return
 									}
@@ -236,7 +238,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							dec.PushButton{
 								Text: data.S.ButtonCansel,
 								OnClicked: func() {
-									log.Println(data.S.Info, data.S.LogCansel)
+									log.Println(data.Log.Info, data.Log.LogCansel)
 									wf.Cancel()
 								},
 							},
@@ -249,9 +251,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Printf(data.S.CreateWindow, data.S.Entity)
+	log.Printf(data.Log.CreateWindow, data.Log.Entity)
 
-	log.Printf(data.S.RunWindow, data.S.Entity)
+	log.Printf(data.Log.RunWindow, data.Log.Entity)
 	return wf.Run(), nil
 }
 
@@ -259,9 +261,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	child := EntityRecChild{}
 	cmd, err := EntityRecRunDialog(wf, db, false, &child)
-	log.Printf(data.S.EndWindow, data.S.EntityRec, cmd)
+	log.Printf(data.Log.EndWindow, data.Log.EntityRec, cmd)
 	if err != nil {
-		return errors.Wrapf(err, data.S.InEntityRecRunDialog, child)
+		return errors.Wrapf(err, data.Log.InEntityRecRunDialog, child)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
@@ -281,10 +283,10 @@ func (wf windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 		}
 		result, err := db.Exec(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorAddDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
 		}
 		if id, err := result.LastInsertId(); err != nil {
-			log.Println(data.S.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
+			log.Println(data.Log.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))
 			walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
 		} else {
 			child.Id = id
@@ -310,9 +312,9 @@ func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 	index := wf.tv.CurrentIndex()
 	child := wf.modelTable.items[index]
 	cmd, err := EntityRecRunDialog(wf, db, true, child)
-	log.Printf(data.S.EndWindow, data.S.EntityRec, cmd)
+	log.Printf(data.Log.EndWindow, data.Log.EntityRec, cmd)
 	if err != nil {
-		return errors.Wrapf(err, data.S.InEntityRecRunDialog, child)
+		return errors.Wrapf(err, data.Log.InEntityRecRunDialog, child)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
@@ -323,7 +325,7 @@ func (wf windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
 		if _, err := db.Exec(QwStr); err != nil {
-			return errors.Wrap(err, data.S.ErrorChangeDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorChangeDB, QwStr)
 		}
 	}
 	wf.modelTable.PublishRowsReset()
@@ -345,7 +347,7 @@ func (wf windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
 		if _, err := db.Exec(QwStr); err != nil {
-			return errors.Wrap(err, data.S.ErrorDeleteDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorDeleteDB, QwStr)
 		}
 	}
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1

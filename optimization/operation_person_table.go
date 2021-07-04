@@ -4,6 +4,8 @@ import (
 	"accounting/data"
 	"database/sql"
 
+	// "fmt"
+
 	//"log"
 
 	"github.com/pkg/errors"
@@ -51,7 +53,7 @@ func SelectId16(db *sql.DB, tableName string) ([]int16, error) {
 		QwStr := data.SelectId(tableName)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var id int16
@@ -64,7 +66,7 @@ func SelectId16(db *sql.DB, tableName string) ([]int16, error) {
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, "In SelectId16"+tableName)
+		return arr, errors.Wrapf(err, data.Log.InSelectId16, tableName)
 	}
 	return arr, nil
 }
@@ -79,7 +81,7 @@ func SelectQualification(db *sql.DB) ([]Qualification, error) {
 		QwStr := data.SelectQualification(nil, nil, nil)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, data.S.ErrorQueryDB+QwStr)
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -92,7 +94,7 @@ func SelectQualification(db *sql.DB) ([]Qualification, error) {
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, "In SelectQualification") //GO-TO строка
+		return arr, errors.Wrapf(err, data.Log.InSelectQualification)
 	}
 	return arr, nil
 }
@@ -143,7 +145,7 @@ func NewQualificationTable(db *sql.DB) (OperationPersonTable, error) {
 		}
 		return nil
 	}()); err != nil {
-		return opt, errors.Wrapf(err, "In NewQualificationTable") //GO-TO строка
+		return opt, errors.Wrapf(err, data.Log.InNewQualificationTable)
 	}
 	return opt, nil
 }

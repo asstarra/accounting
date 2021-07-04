@@ -89,7 +89,7 @@ func (m *Map3) MarkingToString(id int64) string {
 	var s string
 	mline, ok := m.mapIdToMarkingLine[id]
 	if !ok {
-		log.Println(data.S.Warning, "В карте mapIdToMarkingLine не найдено значение ", id)
+		log.Println(data.Log.Warning, "В карте mapIdToMarkingLine не найдено значение ", id)
 		return ""
 	}
 	for _, val := range mline.Hierarchy {
@@ -104,12 +104,12 @@ func (m *Map3) MarkingToString(id int64) string {
 func (m *Map3) EntityToString(id int64) string {
 	e, ok := m.mapIdToEntity[id]
 	if !ok {
-		log.Println(data.S.Warning, "В карте mapIdToEntity не найдено значение ", id)
+		log.Println(data.Log.Warning, "В карте mapIdToEntity не найдено значение ", id)
 		return ""
 	}
 	eType, ok := m.mapIdToEntityType[e.Type]
 	if !ok {
-		log.Println(data.S.Warning, "В карте mapIdToEntityType не найдено значение ", e.Type)
+		log.Println(data.Log.Warning, "В карте mapIdToEntityType не найдено значение ", e.Type)
 		return ""
 	}
 	return fmt.Sprintf("%s %s", eType, e.Title)
@@ -122,13 +122,13 @@ func (m *Map3) MarkedDetailMinToString(md MarkedDetailMin) string {
 	}
 	line := m.mapIdToMarkingLine[md.Marking]
 	if line == nil {
-		log.Println(data.S.Warning, "В карте mapIdToMarkingLine не найдено значение ", md.Marking)
+		log.Println(data.Log.Warning, "В карте mapIdToMarkingLine не найдено значение ", md.Marking)
 		return "ERROR"
 	}
 	eId := line.Hierarchy[len(line.Hierarchy)-1].Id
 	// e := m.mapIdToEntity[eId]
 	// if e == nil {
-	// 	log.Println(data.S.Warning, "В карте mapIdToEntity не найдено значение ", eId)
+	// 	log.Println(data.Log.Warning, "В карте mapIdToEntity не найдено значение ", eId)
 	// 	return "ERROR"
 	// }
 	// return fmt.Sprintf("%s %s %s", m.mapIdToEntityType[e.Type], e.Title, md.Mark)

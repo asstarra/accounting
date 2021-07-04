@@ -2,7 +2,8 @@ package main
 
 import (
 	"database/sql"
-	// "fmt"
+	"fmt"
+	"time"
 
 	// "io"
 	"log"
@@ -26,7 +27,7 @@ func main() {
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorOpenFile+"logfile.txt")
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		return
 	}
 	defer f.Close()
@@ -38,7 +39,7 @@ func main() {
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorInit)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		return
 	}
 
@@ -46,14 +47,14 @@ func main() {
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorOpedDB)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		return
 	}
 	defer db.Close()
 	if err = db.Ping(); err != nil {
 		err = errors.Wrap(err, data.S.ErrorPingDB)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		return
 	}
 
@@ -81,6 +82,12 @@ func main() {
 	// var o optimization.Optimization
 	// o.Init(db, nil, nil)
 	// o.Run()
+	var a = time.Now()
+	fmt.Println(data.ToStr(a), data.ToStr(&a))
+	var b int32 = 7
+	var c int8 = 8
+	fmt.Println(data.ToStr(&b), data.ToStr(b), data.ToStr(&c))
+	fmt.Println(data.Printf("%s, %s, %s, %s", &a, &b, 874.3, c))
 
 	var mw *walk.MainWindow
 	if err := (dec.MainWindow{
@@ -96,7 +103,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -106,7 +113,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -116,7 +123,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -126,7 +133,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.Type, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -136,7 +143,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.Entities, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.Entities, cmd)
 				},
 			},
 			dec.PushButton{
@@ -146,7 +153,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.S.EndWindow, data.S.MarkedDetails, cmd)
+					log.Printf(data.Log.EndWindow, data.Log.MarkedDetails, cmd)
 				},
 			},
 			dec.PushButton{
@@ -165,7 +172,7 @@ func main() {
 	}.Create()); err != nil {
 		err = errors.Wrap(err, data.S.ErrorCreateWindow)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.S.Error, err)
+		log.Println(data.Log.Error, err)
 		return
 	}
 	mw.Run()
