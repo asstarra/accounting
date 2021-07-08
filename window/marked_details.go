@@ -2,7 +2,11 @@ package window
 
 import (
 	"accounting/data"
+	e "accounting/data/errors"
+	l "accounting/data/log"
 	"accounting/data/qwery"
+	"accounting/data/text"
+	. "accounting/window/data"
 	"database/sql"
 	"log"
 
@@ -15,12 +19,12 @@ func SelectMarkedDetails(db *sql.DB, markings []int64) ([]*MarkedDetail, error) 
 	arr := make([]*MarkedDetail, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := qwery.SelectMarkedDetail(markings) //GO-TO ?
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var parentId, parentMarking sql.NullInt64
@@ -29,7 +33,7 @@ func SelectMarkedDetails(db *sql.DB, markings []int64) ([]*MarkedDetail, error) 
 			row := MarkedDetail{}
 			err := rows.Scan(&row.Id, &row.Marking, &row.Mark, &parentId, &parentMarking, &parentMark)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
 			row.Parent.Id = parentId.Int64
 			row.Parent.Marking = parentMarking.Int64
@@ -38,7 +42,7 @@ func SelectMarkedDetails(db *sql.DB, markings []int64) ([]*MarkedDetail, error) 
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.Log.InSelectMarkedDetails, markings)
+		return arr, errors.Wrapf(err, l.In.InSelectMarkedDetails, markings)
 	}
 	return arr, nil
 }
@@ -62,7 +66,7 @@ type windowsFormMarkedDetails struct {
 // Инициализация модели окна.
 func newWindowsFormMarkedDetails(db *sql.DB, parent *MarkedDetailMin) (*windowsFormMarkedDetails, error) {
 	if db == nil {
-		return nil, errors.New(data.S.ErrorNil)
+		return nil, errors.New(e.Err.ErrorNil)
 	}
 	var err error
 	wf := new(windowsFormMarkedDetails)
@@ -76,7 +80,7 @@ func newWindowsFormMarkedDetails(db *sql.DB, parent *MarkedDetailMin) (*windowsF
 	wf.lineM = wf.modelTable.Map3.ModelMarkingLines(0, 0, true)
 	wf.modelTable.items, err = SelectMarkedDetails(db, []int64{})
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorTableInit)
+		err = errors.Wrap(err, e.Err.ErrorTableInit)
 		return nil, err
 	}
 	return wf, nil
@@ -96,13 +100,13 @@ func (m *modelMarkedDetailsComponent) Value(row, col int) interface{} {
 	case 2:
 		return m.Map3.MarkedDetailMinToString(item.Parent)
 	}
-	log.Println(data.Log.Panic, data.S.ErrorUnexpectedColumn)
-	panic(data.S.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn)
+	panic(e.Err.ErrorUnexpectedColumn)
 }
 
 // Описание и запуск диалогового окна.
 func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *MarkedDetailMin) (int, error) {
-	log.Printf(data.Log.BeginWindow, data.Log.MarkedDetails)
+	log.Printf(l.BeginWindow, l.MarkedDetails)
 	var err error
 	var databind *walk.DataBinder
 	var search = new(struct {
@@ -110,12 +114,12 @@ func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *
 	})
 	wf, err := newWindowsFormMarkedDetails(db, parent)
 	if err != nil {
-		return 0, errors.Wrap(err, data.S.ErrorInit)
+		return 0, errors.Wrap(err, e.Err.ErrorInit)
 	}
-	log.Printf(data.Log.InitWindow, data.Log.MarkedDetails)
+	log.Printf(l.InitWindow, l.MarkedDetails)
 	if err = (dec.Dialog{
 		AssignTo: &wf.Dialog,
-		Title:    data.S.HeadingMarkedDetails,
+		Title:    text.T.HeadingMarkedDetails,
 		DataBinder: dec.DataBinder{
 			AssignTo:       &databind,
 			Name:           "search",
@@ -161,22 +165,22 @@ func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *
 					dec.HSpacer{Size: 20},
 
 					dec.PushButton{
-						Text: data.S.ButtonSearch,
+						Text: text.T.ButtonSearch,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogSearch)
+							log.Println(l.Info, l.LogSearch)
 							err := databind.Submit()
 							if err != nil {
-								err = errors.Wrap(err, data.S.ErrorSubmit)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorSubmit)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
 							markings := wf.modelTable.Map3.ToMarkingIds(search.Order, search.Detail, search.Line)
 							lastLen := wf.modelTable.RowCount()
 							if items, err := SelectMarkedDetails(db, markings); err != nil {
-								err = errors.Wrap(err, data.S.ErrorSubquery)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorSubquery)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							} else {
 								wf.modelTable.items = items
@@ -221,35 +225,35 @@ func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *
 				Visible: parent == nil,
 				Children: []dec.Widget{
 					dec.PushButton{
-						Text: data.S.ButtonAdd,
+						Text: text.T.ButtonAdd,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogAdd)
+							log.Println(l.Info, l.LogAdd)
 							if err := wf.add(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorAddRow)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorAddRow)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
 					dec.PushButton{
-						Text: data.S.ButtonChange,
+						Text: text.T.ButtonChange,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogChange)
+							log.Println(l.Info, l.LogChange)
 							if err := wf.change(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorChangeRow)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorChangeRow)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
 					dec.PushButton{
-						Text: data.S.ButtonDelete,
+						Text: text.T.ButtonDelete,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogDelete)
+							log.Println(l.Info, l.LogDelete)
 							if err := wf.delete(db); err != nil {
-								err = errors.Wrap(err, data.S.ErrorDeleteRow)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorDeleteRow)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -260,32 +264,32 @@ func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *
 				Visible: parent != nil,
 				Children: []dec.Widget{
 					dec.PushButton{
-						Text: data.S.ButtonOK,
+						Text: text.T.ButtonOK,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogOk)
+							log.Println(l.Info, l.LogOk)
 							if wf.modelTable.RowCount() > 0 && wf.tv.CurrentIndex() != -1 {
 								index := wf.tv.CurrentIndex()
 								*parent = wf.modelTable.items[index].MarkedDetailMin
 								wf.Accept()
 							} else {
-								walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+								walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
 							}
 						},
 					},
 					dec.PushButton{
-						Text:      data.S.ButtonCansel,
+						Text:      text.T.ButtonCansel,
 						OnClicked: func() { wf.Cancel() },
 					},
 				},
 			},
 		},
 	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, data.S.ErrorCreateWindow)
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Printf(data.Log.CreateWindow, data.Log.MarkedDetails)
+	log.Printf(l.CreateWindow, l.MarkedDetails)
 
-	log.Printf(data.Log.RunWindow, data.Log.MarkedDetails)
+	log.Printf(l.RunWindow, l.MarkedDetails)
 	return wf.Run(), nil
 }
 
@@ -293,21 +297,21 @@ func MarkedDetailsRunDialog(owner walk.Form, db *sql.DB, isChange bool, parent *
 func (wf windowsFormMarkedDetails) add(db *sql.DB) error {
 	var detail MarkedDetail
 	cmd, err := MarkedDetailRunDialog(wf, db, &wf.modelTable.Map3, false, &detail)
-	log.Printf(data.Log.EndWindow, data.Log.Entity, cmd)
+	log.Printf(l.EndWindow, l.Entity, cmd)
 	if err != nil {
-		return errors.Wrapf(err, data.Log.InMarkedDetailRunDialog, false, detail)
+		return errors.Wrapf(err, l.In.InMarkedDetailRunDialog, false, detail)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
 	QwStr := qwery.InsertMarkedDetail(detail.Marking, detail.Parent.Id, detail.Mark)
 	if err = db.Ping(); err != nil {
-		return errors.Wrap(err, data.S.ErrorPingDB)
+		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
 
 	result, err := db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
+		return errors.Wrapf(err, e.Err.ErrorAddDB, QwStr)
 	}
 
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1)
@@ -320,8 +324,8 @@ func (wf windowsFormMarkedDetails) add(db *sql.DB) error {
 	}
 	id, err := result.LastInsertId()
 	if err != nil {
-		log.Println(data.Log.Error, data.S.ErrorInsertIndexLog)
-		walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical)
+		log.Println(l.Error, e.Err.ErrorInsertIndexLog)
+		walk.MsgBox(wf, text.T.MsgBoxError, e.Err.ErrorInsertIndex, data.Icon.Critical)
 		return nil
 	}
 	wf.modelTable.items[index].Id = id
@@ -331,28 +335,28 @@ func (wf windowsFormMarkedDetails) add(db *sql.DB) error {
 // Функция, для изменения строки в таблице.
 func (wf windowsFormMarkedDetails) change(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
 	var err error
 	index := wf.tv.CurrentIndex()
 	detail := wf.modelTable.items[index]
 	cmd, err := MarkedDetailRunDialog(wf, db, &wf.modelTable.Map3, true, detail)
-	log.Printf(data.Log.EndWindow, data.Log.MarkedDetail, cmd)
+	log.Printf(l.EndWindow, l.MarkedDetail, cmd)
 
 	if err != nil {
-		return errors.Wrapf(err, data.Log.InMarkedDetailRunDialog, true, *detail)
+		return errors.Wrapf(err, l.In.InMarkedDetailRunDialog, true, *detail)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
 	QwStr := qwery.UpdateMarkedDetail(detail.Id, detail.Marking, detail.Parent.Id, detail.Mark)
 	if err = db.Ping(); err != nil {
-		return errors.Wrap(err, data.S.ErrorPingDB)
+		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
 	_, err = db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrapf(err, data.S.ErrorChangeDB, QwStr)
+		return errors.Wrapf(err, e.Err.ErrorChangeDB, QwStr)
 	}
 	wf.modelTable.items[index] = detail
 	wf.modelTable.PublishRowsReset()
@@ -363,18 +367,18 @@ func (wf windowsFormMarkedDetails) change(db *sql.DB) error {
 // Функция, для удаления строки из таблицы.
 func (wf windowsFormMarkedDetails) delete(db *sql.DB) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
 	id := wf.modelTable.items[index].Id
 	QwStr := qwery.DeleteMarkedDetail(id)
 	if err := db.Ping(); err != nil {
-		return errors.Wrap(err, data.S.ErrorPingDB)
+		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
 	_, err := db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrapf(err, data.S.ErrorDeleteDB, QwStr)
+		return errors.Wrapf(err, e.Err.ErrorDeleteDB, QwStr)
 	}
 
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1

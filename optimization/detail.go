@@ -2,6 +2,8 @@ package optimization
 
 import (
 	"accounting/data"
+	. "accounting/data/constants"
+	e "accounting/data/errors"
 	"database/sql"
 	"fmt"
 	"time"
@@ -138,12 +140,12 @@ func SelectRouteSheetForDetail(db *sql.DB, idDetail, idEntity int64, start time.
 	arr := make([]Waypoint, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := data.SelectRouteSheet(&idEntity, nil, nil, nil, nil)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -151,7 +153,7 @@ func SelectRouteSheetForDetail(db *sql.DB, idDetail, idEntity int64, start time.
 			var entity int64
 			err := rows.Scan(&entity, &wp.OperationNumber, &wp.Duration, &wp.OperationId, &wp.PersonCount)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
 			if wp.PersonCount != 0 {
 				if wp.Start, wp.Finish, wp.Persons, err = ChoosePersonIdsAndTime(db,
@@ -180,12 +182,12 @@ func SelectDetail(db *sql.DB, startPtr, finishPtr *time.Time) (map[int64]*Detail
 	arr := make([]DetailDB, 0, 20)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := data.SelectDetail(nil, nil, nil, startPtr, finishPtr, nil)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -194,12 +196,12 @@ func SelectDetail(db *sql.DB, startPtr, finishPtr *time.Time) (map[int64]*Detail
 			var state int8
 			err := rows.Scan(&det.Id, &det.Entity, &state, &start, &finish, &det.Parent)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
-			if det.Start, err = time.Parse(data.TimeLayout.MySql, string(start)); err != nil {
+			if det.Start, err = time.Parse(TimeLayoutMySql, string(start)); err != nil {
 				return err // GO-TO error
 			}
-			if det.Finish, err = time.Parse(data.TimeLayout.MySql, string(finish)); err != nil {
+			if det.Finish, err = time.Parse(TimeLayoutMySql, string(finish)); err != nil {
 				return err // GO-TO error
 			}
 			if det.Way, err = SelectRouteSheetForDetail(db, det.Id, det.Entity, det.Start); err != nil {

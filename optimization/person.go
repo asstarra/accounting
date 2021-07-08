@@ -2,6 +2,10 @@ package optimization
 
 import (
 	"accounting/data"
+	. "accounting/data/constants"
+	e "accounting/data/errors"
+	l "accounting/data/log"
+	"accounting/data/qwery"
 	"database/sql"
 
 	// "fmt"
@@ -46,12 +50,12 @@ func SelectPersonTime(db *sql.DB, Person *int16, Start, Finish *time.Time,
 	arr := make([]PersonTime, 0, 10)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := data.SelectPersonTime(Person, Start, Finish, Detail, Entity, Number)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -61,13 +65,13 @@ func SelectPersonTime(db *sql.DB, Person *int16, Start, Finish *time.Time,
 			var start, finish []uint8
 			err := rows.Scan(&pt.Person, &start, &finish, &detail, &entity, &number)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
-			if pt.Start, err = time.Parse(data.TimeLayout.MySql, string(start)); err != nil {
-				return errors.Wrapf(err, data.S.ErrorDecryptTime, string(start))
+			if pt.Start, err = time.Parse(TimeLayoutMySql, string(start)); err != nil {
+				return errors.Wrapf(err, e.Err.ErrorDecryptTime, string(start))
 			}
-			if pt.Finish, err = time.Parse(data.TimeLayout.MySql, string(finish)); err != nil {
-				return errors.Wrapf(err, data.S.ErrorDecryptTime, string(finish))
+			if pt.Finish, err = time.Parse(TimeLayoutMySql, string(finish)); err != nil {
+				return errors.Wrapf(err, e.Err.ErrorDecryptTime, string(finish))
 			}
 			if detail.Valid && entity.Valid && number.Valid {
 				pt.Detail, pt.Number, pt.State = detail.Int64, number.Int32, PersonTimeWorkDB
@@ -78,7 +82,7 @@ func SelectPersonTime(db *sql.DB, Person *int16, Start, Finish *time.Time,
 		}
 		return nil
 	}()); err != nil {
-		return arr, data.Wrapf(err, data.Log.InSelectPersonTime,
+		return arr, qwery.Wrapf(err, l.In.InSelectPersonTime,
 			Person, Start, Finish, Detail, Entity, Number)
 	}
 	return arr, nil
@@ -321,7 +325,7 @@ func SelectPerson(db *sql.DB, startPtr, finishPtr *time.Time) (map[int16]*Person
 		}
 		return nil
 	}()); err != nil {
-		return make(map[int16]*PersonDB, 0), data.Wrapf(err, data.Log.InSelectPerson, startPtr, finishPtr)
+		return make(map[int16]*PersonDB, 0), qwery.Wrapf(err, l.In.InSelectPerson, startPtr, finishPtr)
 	}
 	mp := make(map[int16]*PersonDB, len(arr))
 	for i, person := range arr {

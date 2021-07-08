@@ -2,6 +2,8 @@ package optimization
 
 import (
 	"accounting/data"
+	e "accounting/data/errors"
+	l "accounting/data/log"
 	"database/sql"
 
 	// "fmt"
@@ -48,25 +50,25 @@ func SelectId16(db *sql.DB, tableName string) ([]int16, error) {
 	arr := make([]int16, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := data.SelectId(tableName)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var id int16
 		for rows.Next() {
 			err := rows.Scan(&id)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
 			arr = append(arr, id)
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.Log.InSelectId16, tableName)
+		return arr, errors.Wrapf(err, l.In.InSelectId16, tableName)
 	}
 	return arr, nil
 }
@@ -76,25 +78,25 @@ func SelectQualification(db *sql.DB) ([]Qualification, error) {
 	arr := make([]Qualification, 0)
 	if err := (func() error {
 		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		QwStr := data.SelectQualification(nil, nil, nil)
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			pol := Qualification{}
 			err := rows.Scan(&pol.Person, &pol.Operation, &pol.Level)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
 			arr = append(arr, pol)
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.Log.InSelectQualification)
+		return arr, errors.Wrapf(err, l.In.InSelectQualification)
 	}
 	return arr, nil
 }
@@ -145,7 +147,7 @@ func NewQualificationTable(db *sql.DB) (OperationPersonTable, error) {
 		}
 		return nil
 	}()); err != nil {
-		return opt, errors.Wrapf(err, data.Log.InNewQualificationTable)
+		return opt, errors.Wrapf(err, l.In.InNewQualificationTable)
 	}
 	return opt, nil
 }

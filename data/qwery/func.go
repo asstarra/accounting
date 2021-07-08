@@ -1,10 +1,12 @@
 package qwery
 
 import (
-	"accounting/data"
+	. "accounting/data/constants"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func Prefix(strArr []string) string {
@@ -31,9 +33,9 @@ func ToStr(ptr interface{}) string {
 	}
 	switch t := ptr.(type) {
 	case *time.Time:
-		return t.Format(data.TimeLayout.MySql) // GO-TO
+		return t.Format(TimeLayoutMySql)
 	case time.Time:
-		return t.Format(data.TimeLayout.MySql) // GO-TO
+		return t.Format(TimeLayoutMySql)
 	case *string:
 		return *t
 	case *float32:
@@ -109,4 +111,34 @@ func ToStr(ptr interface{}) string {
 		return ToStr(t.Bool)
 	}
 	return fmt.Sprintf("%v", ptr)
+}
+
+// Превращение нескольких интерфейсов в массив строк.
+func ToStrs(arr []interface{}) []string {
+	strs := make([]string, len(arr), len(arr))
+	for argNum, arg := range arr {
+		strs[argNum] = ToStr(arg)
+	}
+	return strs
+}
+
+func ToIntfs(strs []string) []interface{} {
+	arr := make([]interface{}, len(strs), len(strs))
+	for argNum, arg := range strs {
+		arr[argNum] = arg
+	}
+	return arr
+}
+
+func Printf(format string, arr ...interface{}) string {
+	var strs = ToIntfs(ToStrs(arr))
+	return fmt.Sprintf(format, strs...)
+}
+
+func Wrapf(err error, format string, arr ...interface{}) error {
+	return errors.Wrap(err, Printf(format, arr))
+}
+
+func Wrap(err error, message string) error {
+	return errors.Wrap(err, message)
 }

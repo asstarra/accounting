@@ -1,7 +1,7 @@
 package qwery
 
 import (
-	s "accounting/data"
+	s "accounting/data/db"
 	"fmt"
 )
 

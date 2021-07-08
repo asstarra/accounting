@@ -2,6 +2,10 @@ package window
 
 import (
 	"accounting/data"
+	e "accounting/data/errors"
+	l "accounting/data/log"
+	"accounting/data/text"
+	. "accounting/window/data"
 	"database/sql"
 	"log"
 
@@ -11,17 +15,6 @@ import (
 	dec "github.com/lxn/walk/declarative"
 	"github.com/pkg/errors"
 )
-
-type MarkedDetailMin struct {
-	Id      int64  // Ид детали.
-	Marking int64  // Ид линии.
-	Mark    string // Маркировка.
-}
-
-type MarkedDetail struct {
-	MarkedDetailMin                 // Дочерняя.
-	Parent          MarkedDetailMin // Родительская.
-}
 
 // Структура, содержащая описание и переменные окна.
 type windowsFormMarkedDetail struct {
@@ -36,7 +29,7 @@ type windowsFormMarkedDetail struct {
 func newWindowsFormMarkedDetail(db *sql.DB, map3 *Map3, detail *MarkedDetail) (*windowsFormMarkedDetail, error) {
 	// var err error
 	if db == nil || map3 == nil || detail == nil { // GO-TO в других файлах проверить корректность указателей.
-		return nil, errors.New(data.S.ErrorNil)
+		return nil, errors.New(e.Err.ErrorNil)
 	}
 	wf := new(windowsFormMarkedDetail)
 	wf.Map3 = map3
@@ -54,16 +47,16 @@ func newWindowsFormMarkedDetail(db *sql.DB, map3 *Map3, detail *MarkedDetail) (*
 
 // Описание и запуск диалогового окна.
 func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange bool, detail *MarkedDetail) (int, error) {
-	log.Printf(data.Log.BeginWindow, data.Log.MarkedDetail)
+	log.Printf(l.BeginWindow, l.MarkedDetail)
 	var databind *walk.DataBinder
 	wf, err := newWindowsFormMarkedDetail(db, map3, detail)
 	if err != nil {
-		return 0, errors.Wrap(err, data.S.ErrorInit)
+		return 0, errors.Wrap(err, e.Err.ErrorInit)
 	}
-	log.Printf(data.Log.InitWindow, data.Log.MarkedDetail)
+	log.Printf(l.InitWindow, l.MarkedDetail)
 	if err := (dec.Dialog{
 		AssignTo: &wf.Dialog,
-		Title:    data.S.HeadingMarkedDetail,
+		Title:    text.T.HeadingMarkedDetail,
 		DataBinder: dec.DataBinder{
 			AssignTo:       &databind,
 			Name:           "detail",
@@ -137,7 +130,7 @@ func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange boo
 						MinSize:  dec.Size{150, 10},
 						Text:     wf.Map3.MarkedDetailMinToString(detail.Parent),
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogChoose)
+							log.Println(l.Info, l.LogChoose)
 							if err := (func() error {
 								var parent MarkedDetailMin = detail.Parent
 								if parent.Id == 0 {
@@ -145,9 +138,9 @@ func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange boo
 								}
 								fmt.Println(parent)                                        //GO-TO
 								cmd, err := MarkedDetailsRunDialog(wf, db, false, &parent) // GO-TO выбор только из возможных родителей.
-								log.Printf(data.Log.EndWindow, data.Log.MarkedDetails, cmd)
+								log.Printf(l.EndWindow, l.MarkedDetails, cmd)
 								if err != nil {
-									return errors.Wrapf(err, data.Log.InMarkedDetailsRunDialog, false, parent)
+									return errors.Wrapf(err, l.In.InMarkedDetailsRunDialog, false, parent)
 								}
 								if cmd == walk.DlgCmdOK {
 									detail.Parent = parent
@@ -155,9 +148,9 @@ func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange boo
 								}
 								return nil
 							}()); err != nil {
-								err = errors.Wrap(err, data.S.ErrorChoose)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorChoose)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 							}
 						},
 					},
@@ -167,22 +160,22 @@ func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange boo
 				Layout: dec.HBox{MarginsZero: true},
 				Children: []dec.Widget{
 					dec.PushButton{
-						Text: data.S.ButtonOK,
+						Text: text.T.ButtonOK,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogOk) // GO-TO проверить на корректность mark
+							log.Println(l.Info, l.LogOk) // GO-TO проверить на корректность mark
 							if err := databind.Submit(); err != nil {
-								err = errors.Wrap(err, data.S.ErrorSubmit)
-								log.Println(data.Log.Error, err)
-								walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+								err = errors.Wrap(err, e.Err.ErrorSubmit)
+								log.Println(l.Error, err)
+								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 								return
 							}
 							wf.Accept()
 						},
 					},
 					dec.PushButton{
-						Text: data.S.ButtonCansel,
+						Text: text.T.ButtonCansel,
 						OnClicked: func() {
-							log.Println(data.Log.Info, data.Log.LogCansel)
+							log.Println(l.Info, l.LogCansel)
 							wf.Cancel()
 						},
 					},
@@ -190,12 +183,12 @@ func MarkedDetailRunDialog(owner walk.Form, db *sql.DB, map3 *Map3, isChange boo
 			},
 		},
 	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, data.S.ErrorCreateWindow)
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow)
 		return 0, err
 	}
-	log.Printf(data.Log.CreateWindow, data.Log.MarkedDetail)
+	log.Printf(l.CreateWindow, l.MarkedDetail)
 
-	log.Printf(data.Log.RunWindow, data.Log.MarkedDetail)
+	log.Printf(l.RunWindow, l.MarkedDetail)
 	return wf.Run(), nil
 }
 

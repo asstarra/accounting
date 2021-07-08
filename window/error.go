@@ -1,7 +1,9 @@
 package window
 
 import (
-	"accounting/data"
+	e "accounting/data/errors"
+	l "accounting/data/log"
+	"accounting/data/text"
 	"log"
 
 	dec "github.com/lxn/walk/declarative"
@@ -11,7 +13,7 @@ import (
 // Описание и запуск диалогового окна.
 func ErrorRunWindow(s string) {
 	if _, err := (dec.MainWindow{
-		Title:  data.S.MsgBoxError,
+		Title:  text.T.MsgBoxError,
 		Size:   dec.Size{300, 80},
 		Layout: dec.VBox{},
 		Children: []dec.Widget{
@@ -20,6 +22,6 @@ func ErrorRunWindow(s string) {
 			},
 		},
 	}.Run()); err != nil {
-		log.Println(data.Log.Error, errors.Wrap(err, data.S.ErrorCreateWindowErr+s)) // Лог.
+		log.Println(l.Error, errors.Wrap(err, e.Err.ErrorCreateWindowErr+s)) // Лог.
 	}
 }

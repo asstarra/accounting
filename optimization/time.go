@@ -1,7 +1,9 @@
 package optimization
 
 import (
-	"accounting/data"
+	. "accounting/data/constants"
+	l "accounting/data/log"
+	"accounting/data/qwery"
 	"database/sql"
 	"fmt"
 	"sort"
@@ -21,7 +23,7 @@ func AddDur(start time.Time, second int32) time.Time {
 
 // Округляем дату и время до того же дня и время = 00:00:00.
 func ClearClock(t time.Time) time.Time {
-	t2, _ := time.Parse(data.TimeLayout.Day, t.Format(data.TimeLayout.Day))
+	t2, _ := time.Parse(TimeLayoutDay, t.Format(TimeLayoutDay))
 	return t2
 }
 
@@ -43,8 +45,8 @@ type Day struct {
 
 func (d Day) String() string {
 	return fmt.Sprintf("S=%s, F=%s, Sn=%s, Fn=%s, %d, %d, %d\n",
-		d.StartMin.Format(data.TimeLayout.MySql), d.FinishMax.Format(data.TimeLayout.MySql),
-		d.StartMean.Format(data.TimeLayout.MySql), d.FinishMean.Format(data.TimeLayout.MySql),
+		d.StartMin.Format(TimeLayoutMySql), d.FinishMax.Format(TimeLayoutMySql),
+		d.StartMean.Format(TimeLayoutMySql), d.FinishMean.Format(TimeLayoutMySql),
 		d.Duration, d.FreeDuration, d.CountPerson)
 }
 
@@ -120,7 +122,7 @@ func SelectDays(db *sql.DB, startPtr, finishPtr *time.Time) (Timetable, error) {
 		}
 		return nil
 	}()); err != nil {
-		return Timetable{}, data.Wrapf(err, data.Log.InSelectDays, startPtr, finishPtr)
+		return Timetable{}, qwery.Wrapf(err, l.In.InSelectDays, startPtr, finishPtr)
 	}
 	var dur int32 = 0
 	for _, val := range arr {

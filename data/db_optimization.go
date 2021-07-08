@@ -1,6 +1,8 @@
 package data
 
 import (
+	. "accounting/data/db"
+	q "accounting/data/qwery"
 	"database/sql"
 	"fmt"
 	"time"
@@ -101,13 +103,13 @@ func SelectDetail(vId, vEntity *int64, vState *int8, vStart, vFinish *time.Time,
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sState, *vState))
 	}
 	if vStart != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, ToStr(vStart)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, q.ToStr(vStart)))
 	}
 	if vFinish != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, ToStr(vFinish)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, q.ToStr(vFinish)))
 	}
 	if vParent != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sParent, ToStr(vParent)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sParent, q.ToStr(vParent)))
 	}
 	return Merger(strArr)
 }
@@ -128,10 +130,10 @@ func SelectPersonTime(vPerson *int16, vStart, vFinish *time.Time, vDetail, vEnti
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sPerson, *vPerson))
 	}
 	if vStart != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, ToStr(vStart)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s > %d", sFinish, q.ToStr(vStart)))
 	}
 	if vFinish != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, ToStr(vFinish)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s < %d", sStart, q.ToStr(vFinish)))
 	}
 	if vDetail != nil {
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sDetail, *vDetail))

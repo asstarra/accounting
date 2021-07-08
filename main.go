@@ -10,9 +10,13 @@ import (
 	"os"
 
 	"accounting/data"
+	"accounting/data/db"
+	e "accounting/data/errors"
+	l "accounting/data/log"
+	"accounting/data/qwery"
 	"accounting/optimization"
 	"accounting/window"
-	"accounting/window2"
+	// "accounting/window2"
 )
 
 import (
@@ -26,9 +30,9 @@ func main() {
 	sErr := "Error: "
 	f, err := os.OpenFile("logfile.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorOpenFile+"logfile.txt")
+		err = errors.Wrap(err, e.Err.ErrorOpenFile+"logfile.txt")
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.Log.Error, err)
+		log.Println(l.Error, err)
 		return
 	}
 	defer f.Close()
@@ -38,24 +42,24 @@ func main() {
 
 	err = data.Init()
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorInit)
+		err = errors.Wrap(err, e.Err.ErrorInit)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.Log.Error, err)
+		log.Println(l.Error, err)
 		return
 	}
 
-	db, err := sql.Open("mysql", data.DataSourseTcp())
+	db, err := sql.Open("mysql", db.DataSourseTcp())
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorOpedDB)
+		err = errors.Wrap(err, e.Err.ErrorOpedDB)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.Log.Error, err)
+		log.Println(l.Error, err)
 		return
 	}
 	defer db.Close()
 	if err = db.Ping(); err != nil {
-		err = errors.Wrap(err, data.S.ErrorPingDB)
+		err = errors.Wrap(err, e.Err.ErrorPingDB)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.Log.Error, err)
+		log.Println(l.Error, err)
 		return
 	}
 
@@ -84,11 +88,11 @@ func main() {
 	// o.Init(db, nil, nil)
 	// o.Run()
 	var a = time.Now()
-	fmt.Println(data.ToStr(a), data.ToStr(&a))
+	fmt.Println(qwery.ToStr(a), qwery.ToStr(&a))
 	var b int32 = 7
 	var c int8 = 8
-	fmt.Println(data.ToStr(&b), data.ToStr(b), data.ToStr(&c))
-	fmt.Println(data.Printf("%s, %s, %s, %s", &a, &b, 874.3, c))
+	fmt.Println(qwery.ToStr(&b), qwery.ToStr(b), qwery.ToStr(&c))
+	fmt.Println(qwery.Printf("%s, %s, %s, %s", &a, &b, 874.3, c))
 
 	var mw *walk.MainWindow
 	if err := (dec.MainWindow{
@@ -104,7 +108,7 @@ func main() {
 			// 		if err != nil {
 			// 			log.Println("ERROR!", err)
 			// 		}
-			// 		log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+			// 		log.Printf(l.EndWindow, l.Type, cmd)
 			// 	},
 			// },
 			// dec.PushButton{
@@ -114,7 +118,7 @@ func main() {
 			// 		if err != nil {
 			// 			log.Println("ERROR!", err)
 			// 		}
-			// 		log.Printf(data.Log.EndWindow, data.Log.Entities, cmd)
+			// 		log.Printf(l.EndWindow, l.Entities, cmd)
 			// 	},
 			// },
 
@@ -125,7 +129,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+					log.Printf(l.EndWindow, l.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -135,7 +139,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+					log.Printf(l.EndWindow, l.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -145,7 +149,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+					log.Printf(l.EndWindow, l.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -155,7 +159,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+					log.Printf(l.EndWindow, l.Type, cmd)
 				},
 			},
 			dec.PushButton{
@@ -165,7 +169,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.Entities, cmd)
+					log.Printf(l.EndWindow, l.Entities, cmd)
 				},
 			},
 			dec.PushButton{
@@ -175,7 +179,7 @@ func main() {
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
-					log.Printf(data.Log.EndWindow, data.Log.MarkedDetails, cmd)
+					log.Printf(l.EndWindow, l.MarkedDetails, cmd)
 				},
 			},
 			dec.PushButton{
@@ -192,9 +196,9 @@ func main() {
 			},
 		},
 	}.Create()); err != nil {
-		err = errors.Wrap(err, data.S.ErrorCreateWindow)
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow)
 		window.ErrorRunWindow(sErr + err.Error())
-		log.Println(data.Log.Error, err)
+		log.Println(l.Error, err)
 		return
 	}
 	mw.Run()

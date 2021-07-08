@@ -1,6 +1,8 @@
 package data
 
 import (
+	. "accounting/data/db"
+	q "accounting/data/qwery"
 	"fmt"
 )
 
@@ -56,7 +58,7 @@ func SelectEntity2(vId *int64, vTitle *string, vType *int64, vEnum *bool,
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sType, *vType))
 	}
 	if vEnum != nil {
-		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sEnum, ToStr(vEnum)))
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sEnum, q.ToStr(vEnum)))
 	}
 	if vSpec != nil {
 		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s LIKE '%%%s%%'", sSpec, *vSpec))

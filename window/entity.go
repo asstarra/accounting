@@ -2,51 +2,20 @@ package window
 
 import (
 	"accounting/data"
+	e "accounting/data/errors"
+	l "accounting/data/log"
 	"accounting/data/qwery"
+	"accounting/data/text"
+	. "accounting/window/data"
 	"database/sql"
 
-	"fmt"
+	// "fmt"
 	"log"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
 	"github.com/pkg/errors"
 )
-
-// Тип маркировки компонента
-type Marking int8
-
-const (
-	MarkingNo   Marking = 1 + iota // Не маркируется.
-	MarkingAll                     // Маркировка сквозная.
-	MarkingYear                    // Маркировка по годам.
-)
-
-var MapMarkingToTitle = map[Marking]string{ // TO-DO
-	MarkingNo:   "Нет",
-	MarkingAll:  "Сквозная",
-	MarkingYear: "По годам",
-}
-
-type Entity struct {
-	Id            int64             // Ид.
-	Title         string            // Название.
-	Type          int16             // Ид типа.
-	Enumerable    bool              // Можно посчитать?.
-	Marking       Marking           // Способ маркировки.
-	Specification string            // Спицификация.
-	Note          string            // Примечание.
-	Children      []*EntityRecChild // Дочерние детали: ид с описанием.
-}
-
-func NewEntity() Entity {
-	return Entity{Children: make([]*EntityRecChild, 0, 0)}
-}
-
-func (e Entity) String() string {
-	return fmt.Sprintf("{Id = %d, Title = '%s', Type = %d, Enum = %v, Mark = %s, Spec = '%s', Note = '%s', Children = %v}\n",
-		e.Id, e.Title, e.Type, e.Enumerable, MapMarkingToTitle[e.Marking], e.Specification, e.Note, e.Children)
-}
 
 // Выборка из таблицы Entity всех ее полей удовлетворяющих условию, GO-TO
 // где в значения поля Title входит title,
@@ -59,24 +28,24 @@ func SelectEntity(db *sql.DB, id *int64, title *string, eType *int16, enum *bool
 	if err := (func() error {
 		QwStr := qwery.SelectEntity(id, title, eType, enum, mark, spec, note, isChange)
 		if err := db.Ping(); err != nil { // Пинг БД.
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		rows, err := db.Query(QwStr) // Запрос к БД.
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var row Entity = NewEntity()
 			err := rows.Scan(&row.Id, &row.Title, &row.Type, &row.Enumerable, &row.Marking, &row.Specification, &row.Note)
 			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
+				return errors.Wrap(err, e.Err.ErrorDecryptRow)
 			}
 			arr = append(arr, &row)
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, data.Log.InSelectEntities, title, eType) //GO-TO
+		return arr, errors.Wrapf(err, l.In.InSelectEntity, title, eType) //GO-TO
 	}
 	return arr, nil
 }
@@ -99,8 +68,8 @@ func (m *modelEntityComponent) Value(row, col int) interface{} {
 	case 1:
 		return item.Count
 	}
-	log.Println(data.Log.Panic, data.S.ErrorUnexpectedColumn)
-	panic(data.S.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn)
+	panic(e.Err.ErrorUnexpectedColumn)
 }
 
 // Структура, содержащая описание и переменные окна.
@@ -120,7 +89,7 @@ func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error
 	wf.modelTable.items = entity.Children
 	wf.modelType, wf.mapIdToTitle, err = SelectId16Title(db, "EntityType", nil, nil)
 	if err != nil {
-		err = errors.Wrap(err, data.S.ErrorTypeInit)
+		err = errors.Wrap(err, e.Err.ErrorTypeInit)
 		return nil, err
 	}
 	return wf, nil
@@ -128,17 +97,17 @@ func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error
 
 // Описание и запуск диалогового окна.
 func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
-	log.Printf(data.Log.BeginWindow, data.Log.Entity) // Лог.
-	sButtonAdd := " компонент"                        // GO-TO возможно нужно? вынести строку
-	var databind *walk.DataBinder                     // Инициализация
+	log.Printf(l.BeginWindow, l.Entity) // Лог.
+	sButtonAdd := " компонент"          // GO-TO возможно нужно? вынести строку
+	var databind *walk.DataBinder       // Инициализация
 	wf, err := newWindowsFormEntity(db, entity)
 	if err != nil {
-		return 0, errors.Wrap(err, data.S.ErrorInit)
+		return 0, errors.Wrap(err, e.Err.ErrorInit)
 	}
-	log.Printf(data.Log.InitWindow, data.Log.Entity) // Лог.
-	if err := (dec.Dialog{                           // Описание окна.
+	log.Printf(l.InitWindow, l.Entity) // Лог.
+	if err := (dec.Dialog{             // Описание окна.
 		AssignTo: &wf.Dialog,           // Привязка окна.
-		Title:    data.S.HeadingEntity, // Название.
+		Title:    text.T.HeadingEntity, // Название.
 		DataBinder: dec.DataBinder{ // Привязка к структуре.
 			AssignTo:       &databind,
 			Name:           "entity",
@@ -228,49 +197,49 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 
 							dec.PushButton{ // Кнопка добавить дочерний компонент.
 								ColumnSpan: 2,
-								Text:       data.S.ButtonAdd + sButtonAdd,
+								Text:       text.T.ButtonAdd + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.Log.Info, data.Log.LogAdd) // Лог.
+									log.Println(l.Info, l.LogAdd) // Лог.
 									if err := wf.add(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorAddRow) // Обработка ошибок.
-										log.Println(data.Log.Error, err)           // Лог.
-										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+										err = errors.Wrap(err, e.Err.ErrorAddRow) // Обработка ошибок.
+										log.Println(l.Error, err)                 // Лог.
+										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка изменения дочернего компонента.
 								ColumnSpan: 2,
-								Text:       data.S.ButtonChange + sButtonAdd,
+								Text:       text.T.ButtonChange + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.Log.Info, data.Log.LogChange) // Лог.
+									log.Println(l.Info, l.LogChange) // Лог.
 									if err := wf.change(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorChangeRow) // Обработка ошибок.
-										log.Println(data.Log.Error, err)              // Лог.
-										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+										err = errors.Wrap(err, e.Err.ErrorChangeRow) // Обработка ошибок.
+										log.Println(l.Error, err)                    // Лог.
+										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка удаления дочернего компонента.
 								ColumnSpan: 2,
-								Text:       data.S.ButtonDelete + sButtonAdd,
+								Text:       text.T.ButtonDelete + sButtonAdd,
 								OnClicked: func() {
-									log.Println(data.Log.Info, data.Log.LogDelete) // Лог.
+									log.Println(l.Info, l.LogDelete) // Лог.
 									if err := wf.delete(db, entity); err != nil {
-										err = errors.Wrap(err, data.S.ErrorDeleteRow) // Обработка ошибок.
-										log.Println(data.Log.Error, err)              // Лог.
-										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+										err = errors.Wrap(err, e.Err.ErrorDeleteRow) // Обработка ошибок.
+										log.Println(l.Error, err)                    // Лог.
+										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 									}
 								},
 							},
 
 							dec.PushButton{ // Кнопка Ок.
-								Text: data.S.ButtonOK,
+								Text: text.T.ButtonOK,
 								OnClicked: func() {
-									log.Println(data.Log.Info, data.Log.LogOk) // Лог.
+									log.Println(l.Info, l.LogOk) // Лог.
 									if err := databind.Submit(); err != nil {
-										err = errors.Wrap(err, data.S.ErrorSubmit) // Обработка ошибок.
-										log.Println(data.Log.Error, err)           // Лог.
-										walk.MsgBox(wf, data.S.MsgBoxError, MsgError(err), data.Icon.Error)
+										err = errors.Wrap(err, e.Err.ErrorSubmit) // Обработка ошибок.
+										log.Println(l.Error, err)                 // Лог.
+										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
 										return
 									}
 									entity.Children = wf.modelTable.items
@@ -278,9 +247,9 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								},
 							},
 							dec.PushButton{ // Кнопка отмена.
-								Text: data.S.ButtonCansel,
+								Text: text.T.ButtonCansel,
 								OnClicked: func() {
-									log.Println(data.Log.Info, data.Log.LogCansel) // Лог.
+									log.Println(l.Info, l.LogCansel) // Лог.
 									wf.Cancel()
 								},
 							},
@@ -290,22 +259,22 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 			},
 		},
 	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, data.S.ErrorCreateWindow) // Обработка ошибок создания окна.
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow) // Обработка ошибок создания окна.
 		return 0, err
 	}
-	log.Printf(data.Log.CreateWindow, data.Log.Entity) // Лог.
+	log.Printf(l.CreateWindow, l.Entity) // Лог.
 
-	log.Printf(data.Log.RunWindow, data.Log.Entity) // Лог.
-	return wf.Run(), nil                            // Запуск окна.
+	log.Printf(l.RunWindow, l.Entity) // Лог.
+	return wf.Run(), nil              // Запуск окна.
 }
 
 // Функция, для добавления строки в таблицу.
 func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	child := EntityRecChild{}
 	cmd, err := EntityRecRunDialog(wf, db, false, &child)
-	log.Printf(data.Log.EndWindow, data.Log.EntityRec, cmd) // Лог.
+	log.Printf(l.EndWindow, l.EntityRec, cmd) // Лог.
 	if err != nil {
-		return errors.Wrapf(err, data.Log.InEntityRecRunDialog, child)
+		return errors.Wrapf(err, l.In.InEntityRecRunDialog, child)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
@@ -320,19 +289,19 @@ func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 		}
 		if s != "" {
 			s = wf.mapIdToTitle[entity.Type] + " " + entity.Title + " -> " + s
-			return errors.Wrap(errors.New(s), data.S.ErrorGraphCircle)
+			return errors.Wrap(errors.New(s), e.Err.ErrorGraphCircle)
 		}
 		QwStr := qwery.InsertEntityRec(entity.Id, child.Id, child.Count)
 		if err = db.Ping(); err != nil { // Пинг БД.
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		result, err := db.Exec(QwStr) // Запрос к БД.
 		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorAddDB, QwStr)
 		}
 		if id, err := result.LastInsertId(); err != nil {
-			log.Println(data.Log.Error, errors.Wrap(err, data.S.ErrorInsertIndexLog))        // Лог.
-			walk.MsgBox(wf, data.S.MsgBoxError, data.S.ErrorInsertIndex, data.Icon.Critical) // TO-DO
+			log.Println(l.Error, errors.Wrap(err, e.Err.ErrorInsertIndexLog))               // Лог.
+			walk.MsgBox(wf, text.T.MsgBoxError, e.Err.ErrorInsertIndex, data.Icon.Critical) // TO-DO
 		} else {
 			child.Id = id
 		}
@@ -352,15 +321,15 @@ func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 // Функция, для изменения строки в таблице.
 func (wf *windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
 	child := wf.modelTable.items[index]
 	cmd, err := EntityRecRunDialog(wf, db, true, child)
-	log.Printf(data.Log.EndWindow, data.Log.EntityRec, cmd) // Лог.
+	log.Printf(l.EndWindow, l.EntityRec, cmd) // Лог.
 	if err != nil {
-		return errors.Wrapf(err, data.Log.InEntityRecRunDialog, child)
+		return errors.Wrapf(err, l.In.InEntityRecRunDialog, child)
 	}
 	if cmd != walk.DlgCmdOK {
 		return nil
@@ -371,10 +340,10 @@ func (wf *windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 	if entity.Id != 0 { // Здесь изменяем дочернюю сущность при известной родительской.
 		QwStr := qwery.UpdateEntityRec(entity.Id, child.Id, child.Count)
 		if err = db.Ping(); err != nil { // Пинг БД.
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		if _, err := db.Exec(QwStr); err != nil { // Запрос к БД.
-			return errors.Wrapf(err, data.S.ErrorChangeDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorChangeDB, QwStr)
 		}
 	}
 	wf.modelTable.PublishRowsReset() // Обновление таблицы.
@@ -385,7 +354,7 @@ func (wf *windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 // Функция, для удаления строки из таблицы.
 func (wf *windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, data.S.MsgBoxInfo, data.S.MsgChooseRow, data.Icon.Info)
+		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
@@ -395,10 +364,10 @@ func (wf *windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
 	if entity.Id != 0 {
 		QwStr := qwery.DeleteEntityRec(entity.Id, id)
 		if err := db.Ping(); err != nil { // Пинг БД.
-			return errors.Wrap(err, data.S.ErrorPingDB)
+			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
 		if _, err := db.Exec(QwStr); err != nil { // Запрос к БД.
-			return errors.Wrapf(err, data.S.ErrorDeleteDB, QwStr)
+			return errors.Wrapf(err, e.Err.ErrorDeleteDB, QwStr)
 		}
 	}
 	// Обновление таблицы.
@@ -425,7 +394,7 @@ func checkEntityRec(db *sql.DB, parent int64, children []*EntityRecChild) (strin
 	for _, val := range children { // Для каждой дочерней сущности, вызываем функцию рекурсивно.
 		_, children2, err := SelectEntityRecChild(db, &val.Id)
 		if err != nil {
-			return "", errors.Wrap(err, data.S.ErrorSubquery)
+			return "", errors.Wrap(err, e.Err.ErrorSubquery)
 		}
 		s, err := checkEntityRec(db, parent, children2)
 		if err != nil {
