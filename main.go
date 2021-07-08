@@ -12,6 +12,7 @@ import (
 	"accounting/data"
 	"accounting/optimization"
 	"accounting/window"
+	"accounting/window2"
 )
 
 import (
@@ -96,6 +97,27 @@ func main() {
 		Size:     dec.Size{300, 80},
 		Layout:   dec.VBox{},
 		Children: []dec.Widget{
+			// dec.PushButton{
+			// 	Text: "Тип компонента",
+			// 	OnClicked: func() {
+			// 		cmd, err := window2.TypeRunDialog(mw, db, "EntityType")
+			// 		if err != nil {
+			// 			log.Println("ERROR!", err)
+			// 		}
+			// 		log.Printf(data.Log.EndWindow, data.Log.Type, cmd)
+			// 	},
+			// },
+			// dec.PushButton{
+			// 	Text: "Компоненты",
+			// 	OnClicked: func() {
+			// 		cmd, err := window2.EntitiesRunDialog(mw, db, true, nil)
+			// 		if err != nil {
+			// 			log.Println("ERROR!", err)
+			// 		}
+			// 		log.Printf(data.Log.EndWindow, data.Log.Entities, cmd)
+			// 	},
+			// },
+
 			dec.PushButton{
 				Text: "EntityType",
 				OnClicked: func() {

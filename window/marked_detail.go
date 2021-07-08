@@ -12,13 +12,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+type MarkedDetailMin struct {
+	Id      int64  // Ид детали.
+	Marking int64  // Ид линии.
+	Mark    string // Маркировка.
+}
+
+type MarkedDetail struct {
+	MarkedDetailMin                 // Дочерняя.
+	Parent          MarkedDetailMin // Родительская.
+}
+
 // Структура, содержащая описание и переменные окна.
 type windowsFormMarkedDetail struct {
 	*walk.Dialog
 	buttonChooseWidget     *walk.PushButton
 	Map3                   *Map3
 	orderW, detailW, lineW *walk.ComboBox
-	orderM, detailM, lineM []*IdTitle
+	orderM, detailM, lineM []*Id64Title
 }
 
 // Инициализация модели окна.

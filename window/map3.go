@@ -11,9 +11,9 @@ import (
 )
 
 type Map3 struct {
-	mapIdToMarkingLine map[int64]*MarkingLine
-	mapIdToEntity      map[int64]*Entity
-	mapIdToEntityType  map[int64]string
+	mapIdToMarkingLine map[int64]*MarkingLine // Отображение Ид в линию.
+	mapIdToEntity      map[int64]*Entity      // Отображение Ид в сущность.
+	mapIdToEntityType  map[int16]string       // Отображение Ид в тип сущности.
 	ToMarkingIds       func(order, detail, line int64) []int64
 }
 
@@ -25,7 +25,7 @@ func NewMap3(db *sql.DB, isAllEntities bool) (Map3, error) {
 		err = errors.Wrap(err, data.S.ErrorSubquery)
 		return m, err
 	}
-	_, m.mapIdToEntityType, err = SelectIdTitle(db, "EntityType")
+	_, m.mapIdToEntityType, err = SelectId16Title(db, "EntityType", nil, nil)
 	if err != nil {
 		err = errors.Wrap(err, data.S.ErrorTypeInit)
 		return m, err
@@ -72,11 +72,11 @@ func (m *Map3) toMarkingIds(order, detail, line int64) []int64 {
 	return markings
 }
 
-// Переводит индификатор маркировочной линии в список указателей на структуру IdTitle
-func (m *Map3) MarkingsToIdTitles(ids []int64) []*IdTitle {
-	arr := make([]*IdTitle, 0, len(ids))
+// Переводит индификатор маркировочной линии в список указателей на структуру Id64Title
+func (m *Map3) MarkingsToIdTitles(ids []int64) []*Id64Title {
+	arr := make([]*Id64Title, 0, len(ids))
 	for _, val := range ids {
-		arr = append(arr, &IdTitle{Id: val, Title: m.MarkingToString(val)})
+		arr = append(arr, &Id64Title{Id: val, Title: m.MarkingToString(val)})
 	}
 	sort.Slice(arr, func(i, j int) bool {
 		return arr[i].Title < arr[j].Title
@@ -137,18 +137,18 @@ func (m *Map3) MarkedDetailMinToString(md MarkedDetailMin) string {
 
 // Переводит список индификаторов маркировочных линий в список ид сущностей
 // с названием заказов.
-func (m *Map3) IdsToModelOrders(ids []int64, isAll bool) []*IdTitle {
+func (m *Map3) IdsToModelOrders(ids []int64, isAll bool) []*Id64Title {
 	mapOrder := make(map[int64]bool, len(ids)/5)
 	for _, val := range ids {
 		line := m.mapIdToMarkingLine[val]
 		mapOrder[line.Hierarchy[0].Id] = true
 	}
-	arr := make([]*IdTitle, 0, len(mapOrder)+1)
+	arr := make([]*Id64Title, 0, len(mapOrder)+1)
 	if isAll {
-		arr = append(arr, &IdTitle{})
+		arr = append(arr, &Id64Title{})
 	}
 	for key, _ := range mapOrder {
-		arr = append(arr, &IdTitle{Id: key, Title: m.EntityToString(key)})
+		arr = append(arr, &Id64Title{Id: key, Title: m.EntityToString(key)})
 	}
 	sort.Slice(arr, func(i, j int) bool {
 		return arr[i].Title < arr[j].Title
@@ -157,24 +157,24 @@ func (m *Map3) IdsToModelOrders(ids []int64, isAll bool) []*IdTitle {
 }
 
 // По ид заказа, детали и линии собирает список индификаторов с названием заказов.
-func (m *Map3) ModelOrders(detail, line int64, isAll bool) []*IdTitle {
+func (m *Map3) ModelOrders(detail, line int64, isAll bool) []*Id64Title {
 	return m.IdsToModelOrders(m.ToMarkingIds(0, detail, line), isAll)
 }
 
 // Переводит список индификаторов маркировочных линий в список ид сущностей
 // с названием деталей.
-func (m *Map3) IdsToModelDetails(ids []int64, isAll bool) []*IdTitle {
+func (m *Map3) IdsToModelDetails(ids []int64, isAll bool) []*Id64Title {
 	mapDetails := make(map[int64]bool, len(ids)/2)
 	for _, val := range ids {
 		line := m.mapIdToMarkingLine[val]
 		mapDetails[line.Hierarchy[len(line.Hierarchy)-1].Id] = true
 	}
-	arr := make([]*IdTitle, 0, len(mapDetails)+1)
+	arr := make([]*Id64Title, 0, len(mapDetails)+1)
 	if isAll {
-		arr = append(arr, &IdTitle{})
+		arr = append(arr, &Id64Title{})
 	}
 	for key, _ := range mapDetails {
-		arr = append(arr, &IdTitle{Id: key, Title: m.EntityToString(key)})
+		arr = append(arr, &Id64Title{Id: key, Title: m.EntityToString(key)})
 	}
 	sort.Slice(arr, func(i, j int) bool {
 		return arr[i].Title < arr[j].Title
@@ -183,12 +183,12 @@ func (m *Map3) IdsToModelDetails(ids []int64, isAll bool) []*IdTitle {
 }
 
 // По ид заказа, детали и линии собирает список индификаторов с названием деталей.
-func (m *Map3) ModelDetails(order, line int64, isAll bool) []*IdTitle {
+func (m *Map3) ModelDetails(order, line int64, isAll bool) []*Id64Title {
 	return m.IdsToModelDetails(m.ToMarkingIds(order, 0, line), isAll)
 }
 
 // По ид заказа, детали и линии собирает список индификаторов с названием маркировочных линий.
-func (m *Map3) ModelMarkingLines(order, detail int64, isAll bool) []*IdTitle {
+func (m *Map3) ModelMarkingLines(order, detail int64, isAll bool) []*Id64Title {
 	ids := m.ToMarkingIds(order, detail, 0)
 	if isAll {
 		ids = append(ids, 0)
@@ -196,8 +196,8 @@ func (m *Map3) ModelMarkingLines(order, detail int64, isAll bool) []*IdTitle {
 	return m.MarkingsToIdTitles(ids)
 }
 
-// Переводит IdTitle в []int64
-func (m *Map3) ModelToIds(model []*IdTitle) []int64 {
+// Переводит Id64Title в []int64
+func (m *Map3) ModelToIds(model []*Id64Title) []int64 {
 	arr := make([]int64, 0, len(model))
 	for _, val := range model {
 		arr = append(arr, val.Id)

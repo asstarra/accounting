@@ -2,8 +2,8 @@ package window
 
 import (
 	"accounting/data"
+	"accounting/data/qwery"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/lxn/walk"
@@ -17,10 +17,10 @@ func SelectMarkedDetails(db *sql.DB, markings []int64) ([]*MarkedDetail, error) 
 		if err := db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		QwStr := data.SelectMarkedDetail(markings) //GO-TO ?
+		QwStr := qwery.SelectMarkedDetail(markings) //GO-TO ?
 		rows, err := db.Query(QwStr)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf(data.S.ErrorQueryDB, QwStr))
+			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
 		defer rows.Close()
 		var parentId, parentMarking sql.NullInt64
@@ -56,7 +56,7 @@ type windowsFormMarkedDetails struct {
 	modelTable             *modelMarkedDetailsComponent
 	tv                     *walk.TableView
 	orderW, detailW, lineW *walk.ComboBox
-	orderM, detailM, lineM []*IdTitle
+	orderM, detailM, lineM []*Id64Title
 }
 
 // Инициализация модели окна.
@@ -300,14 +300,14 @@ func (wf windowsFormMarkedDetails) add(db *sql.DB) error {
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
-	QwStr := data.InsertMarkedDetail(detail.Marking, detail.Parent.Id, detail.Mark)
+	QwStr := qwery.InsertMarkedDetail(detail.Marking, detail.Parent.Id, detail.Mark)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
 
 	result, err := db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf(data.S.ErrorAddDB, QwStr))
+		return errors.Wrapf(err, data.S.ErrorAddDB, QwStr)
 	}
 
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1)
@@ -346,13 +346,13 @@ func (wf windowsFormMarkedDetails) change(db *sql.DB) error {
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
-	QwStr := data.UpdateMarkedDetail(detail.Id, detail.Marking, detail.Parent.Id, detail.Mark)
+	QwStr := qwery.UpdateMarkedDetail(detail.Id, detail.Marking, detail.Parent.Id, detail.Mark)
 	if err = db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
 	_, err = db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf(data.S.ErrorChangeDB, QwStr))
+		return errors.Wrapf(err, data.S.ErrorChangeDB, QwStr)
 	}
 	wf.modelTable.items[index] = detail
 	wf.modelTable.PublishRowsReset()
@@ -368,13 +368,13 @@ func (wf windowsFormMarkedDetails) delete(db *sql.DB) error {
 	}
 	index := wf.tv.CurrentIndex()
 	id := wf.modelTable.items[index].Id
-	QwStr := data.DeleteMarkedDetail(id)
+	QwStr := qwery.DeleteMarkedDetail(id)
 	if err := db.Ping(); err != nil {
 		return errors.Wrap(err, data.S.ErrorPingDB)
 	}
 	_, err := db.Exec(QwStr)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf(data.S.ErrorDeleteDB, QwStr))
+		return errors.Wrapf(err, data.S.ErrorDeleteDB, QwStr)
 	}
 
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1) //&& len(wf.tv.SelectedIndexes()) <= 1

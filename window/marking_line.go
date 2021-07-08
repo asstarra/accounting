@@ -2,6 +2,7 @@ package window
 
 import (
 	"accounting/data"
+	"accounting/data/qwery"
 	"database/sql"
 
 	// "fmt"
@@ -10,45 +11,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Выборка всех значений из таблицы описывающей состав сущности (EntityRec):
-// Родительская сущность, дочерняя сущность и количество.
-// Родительская сущность описывается только идентификатором, для дочерней
-// также выбирается поле "тип сущности + название сущности".
-func SelectEntityRec(db *sql.DB) ([]*EntityRec, error) {
-	arr := make([]*EntityRec, 0)
-	if err := (func() error {
-		if err := db.Ping(); err != nil {
-			return errors.Wrap(err, data.S.ErrorPingDB)
-		}
-		QwStr := data.SelectEntityRec()
-		rows, err := db.Query(QwStr)
-		if err != nil {
-			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
-		}
-		defer rows.Close()
-		var e_type, title string
-		for rows.Next() {
-			row := EntityRec{}
-			err := rows.Scan(&row.IdP, &row.Id, &e_type, &title, &row.Count)
-			if err != nil {
-				return errors.Wrap(err, data.S.ErrorDecryptRow)
-			}
-			row.Title = e_type + " " + title
-			arr = append(arr, &row)
-		}
-		return nil
-	}()); err != nil {
-		return arr, errors.Wrapf(err, data.Log.InSelectEntityRec)
-	}
-	return arr, nil
+type IdCount struct {
+	Id    int64 // Ид.
+	Count int32 // Количество.
+}
+
+type MarkingLine struct {
+	Id        int64     // Ид линии.
+	Hierarchy []IdCount // Линия.
 }
 
 // Выборка иерархических линий по составу сущностей.
+// Выбираются все сущности и записываются в карту, затем выбирается состав,
+// из состава дочерние сущности добавляются к родительским.
+// Возращает массив линий и карту сущностей.
 func SelectMarkingLineNow(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error) {
 	var mapIdToEntity map[int64]*Entity
 	var MarkingLines []*MarkingLine
 	if err := (func() error {
-		entities, err := SelectEntities(db, "", 0, true)
+		entities, err := SelectEntity(db, nil, nil, nil, nil, nil, nil, nil, true)
 		if err != nil {
 			return err
 		}
@@ -57,7 +38,7 @@ func SelectMarkingLineNow(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		for _, val := range entities {
 			mapIdToEntity[val.Id] = val
 		}
-		entityRec, err := SelectEntityRec(db)
+		entityRec, _, err := SelectEntityRecChild(db, nil)
 		if err != nil {
 			return err
 		}
@@ -72,13 +53,13 @@ func SelectMarkingLineNow(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		}
 		return nil
 	}()); err != nil {
-		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineNew)
+		return MarkingLines, mapIdToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineNew) // Обработка ошибок.
 	}
 	return MarkingLines, mapIdToEntity, nil
 }
 
-// Добавление в список иерархических линий
-// линий, состоящих только из первого и последнего элемента.
+// Добавление в список иерархических линий, таких линий, которые состоят только
+// из первого и последнего элемента, с указанием количества.
 func appendOrderDetail(MarkingLines *[]*MarkingLine) {
 	appendOnlyOne := func(order, detail IdCount) {
 		contains := false
@@ -125,15 +106,15 @@ func createLineRec(hierarchy []IdCount, children []*EntityRecChild, MarkingLines
 	}
 }
 
-// Выборка сущностей входящих в иерархическую линию.
+// Выборка сущностей входящих в одну иерархическую линию.
 func SelectMarkingLineEntity(db *sql.DB, id int64) (map[int8]*Entity, error) {
 	mapNumberToEntity := make(map[int8]*Entity)
 	if err := (func() error {
-		QwStr := data.SelectMarkingLineEntity(id)
-		if err := db.Ping(); err != nil {
+		QwStr := qwery.SelectMarkingLineEntity(id)
+		if err := db.Ping(); err != nil { // Пинг БД.
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		rows, err := db.Query(QwStr)
+		rows, err := db.Query(QwStr) // Запрос к БД.
 		if err != nil {
 			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
 		}
@@ -141,14 +122,14 @@ func SelectMarkingLineEntity(db *sql.DB, id int64) (map[int8]*Entity, error) {
 		for rows.Next() {
 			var number int8
 			row := NewEntity()
-			err := rows.Scan(&number, &row.Id, &row.Title, &row.Type, &row.Specification, &row.Marking, &row.Note)
+			err := rows.Scan(&number, &row.Id, &row.Title, &row.Type, &row.Enumerable, &row.Marking, &row.Specification, &row.Note)
 			if err != nil {
 				return errors.Wrap(err, data.S.ErrorDecryptRow)
 			}
 			mapNumberToEntity[number] = &row
 		}
 		return nil
-	}()); err != nil {
+	}()); err != nil { // Обработка ошибок.
 		return mapNumberToEntity, errors.Wrapf(err, data.Log.InSelectMarkingLineEntity, id)
 	}
 	return mapNumberToEntity, nil
@@ -162,7 +143,7 @@ func SelectMarkingLineOld(db *sql.DB) ([]*MarkingLine, map[int64]*Entity, error)
 		if err := db.Ping(); err != nil {
 			return errors.Wrap(err, data.S.ErrorPingDB)
 		}
-		QwStr := data.SelectMarking()
+		QwStr := qwery.SelectMarking()
 		rows, err := db.Query(QwStr)
 		if err != nil {
 			return errors.Wrapf(err, data.S.ErrorQueryDB, QwStr)
@@ -238,7 +219,7 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 			}
 			for j, valN := range now {
 				if valN.Id == 0 {
-					QwStr := data.InsertMarking()
+					QwStr := qwery.InsertMarking()
 					if err := db.Ping(); err != nil {
 						return errors.Wrap(err, data.S.ErrorPingDB)
 					}
@@ -270,7 +251,7 @@ func UpdateMarkingLine(db *sql.DB, isAllEntities bool) (map[int64]*MarkingLine, 
 	}()); err != nil {
 		err = errors.Wrap(err, data.S.ErrorUpdateMarkingLine)
 		log.Println(data.Log.Error, err)
-		ErrorRunWindow(err.Error()) // GO-TO
+		ErrorRunWindow(MsgError(err)) // GO-TO
 	}
 	mapIdToMarkingLine = make(map[int64]*MarkingLine, len(now))
 	for _, val := range now {

@@ -32,6 +32,47 @@ func DeleteType(tableName string, vId int64) string {
 	return fmt.Sprintf("DELETE FROM %s WHERE %s = %d", table.Name, sId, vId)
 }
 
+func SelectEntity2(vId *int64, vTitle *string, vType *int64, vEnum *bool,
+	vSpec *string, vMark *int8, vNote *string, isChange bool) string {
+	table := Tab["Entity"]
+	sId := table.Columns["Id"].Name
+	sTitle := table.Columns["Title"].Name
+	sType := table.Columns["Type"].Name
+	sEnum := table.Columns["Enumerable"].Name
+	sSpec := table.Columns["Specification"].Name
+	sMark := table.Columns["Marking"].Name
+	sNote := table.Columns["Note"].Name
+	strArr := make([]string, 1, 9)
+	strArr[0] = fmt.Sprintf("SELECT %s AS id, %s AS title, %s AS type, %s AS enum,"+
+		" %s AS spec, %s AS mark, %s AS note FROM %s",
+		sId, sTitle, sType, sEnum, sSpec, sMark, sNote, table.Name)
+	if vId != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sId, *vId))
+	}
+	if vTitle != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s LIKE '%%%s%%'", sTitle, *vTitle))
+	}
+	if vType != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sType, *vType))
+	}
+	if vEnum != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %s", sEnum, ToStr(vEnum)))
+	}
+	if vSpec != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s LIKE '%%%s%%'", sSpec, *vSpec))
+	}
+	if vMark != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s = %d", sMark, *vMark))
+	}
+	if vNote != nil {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s LIKE '%%%s%%'", sNote, *vNote))
+	}
+	if !isChange {
+		strArr = append(strArr, Prefix(strArr)+fmt.Sprintf("%s != 1", sType)) //GO-TO
+	}
+	return Merger(strArr)
+}
+
 func SelectEntity(title string, entityType int64, isChange bool) string {
 	table := Tab["Entity"]
 	sId := table.Columns["Id"].Name

@@ -1,0 +1,131 @@
+{
+  "EntityType": {
+    "Name": "entity_type",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Title": { "Name": "title" }
+    }
+  },
+  "Person": {
+    "Name": "person",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Title": { "Name": "name" }
+    }
+  },
+  "StatusType": {
+    "Name": "status_type",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Title": { "Name": "title" }
+    }
+  },
+  "Operation": {
+    "Name": "operation",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Title": { "Name": "title" }
+    }
+  },
+
+  "Entity": {
+    "Name": "entity",
+    "Columns": {
+      "Id": { "Name": "id" },
+	  "Enumerable": { "Name": "enumerable" },
+      "Note": { "Name": "note" },
+      "Marking": { "Name": "marking" },
+      "Specification": { "Name": "specification" },
+      "Title": { "Name": "title" },
+      "Type": { "Name": "id_type" }
+    }
+  },
+  "EntityRec": {
+    "Name": "entity_rec",
+    "Columns": {
+      "Child": { "Name": "id_child" },
+      "Count": { "Name": "count" },
+      "Parent": { "Name": "id_parent" }
+    }
+  },
+  "Marking": {
+    "Name": "marking",
+    "Columns": {
+      "Id": { "Name": "id" }
+    }
+  },
+  "MarkingLine": {
+    "Name": "marking_line",
+    "Columns": {
+      "Entity": { "Name": "id_entity" },
+      "Marking": { "Name": "id_marking" },
+      "Number": { "Name": "number" }
+    }
+  },
+  "MarkedDetail": {
+    "Name": "marked_detail",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Marking": { "Name": "id_marking" },
+      "Mark": { "Name": "mark" },
+      "Parent": { "Name": "id_parent" }
+    }
+  },
+  "Status": {
+    "Name": "status",
+    "Columns": {
+      "Id": { "Name": "id" },
+      "Day": { "Name": "day" },
+      "Type": { "Name": "id_type" },
+      "Person": { "Name": "person" },
+      "Note": { "Name": "note" }
+    }
+  },
+  "StatusDetail": {
+    "Name": "status_detail",
+    "Columns": {
+      "Detail": { "Name": "id_detail" },
+      "Status": { "Name": "status" }
+    }
+  },
+  "Qualification": {
+	"Name": "qualification",
+	"Columns": {
+		"Person": { "Name": "id_person" },
+		"Operation": { "Name": "id_operation" },
+		"Level": { "Name": "level"}
+	}
+  },
+  "RouteSheet": {
+	"Name": "route_sheet",
+	"Columns": {
+		"Entity": { "Name": "id_entity" },
+		"Number": { "Name": "number" },
+		"Duration": { "Name": "duration" },
+		"PersonCount": { "Name": "person_count"},
+		"Operation": { "Name": "id_operation" }
+	}
+  },
+  "Detail": {
+	"Name": "detail",
+	"Columns": {
+		"Id": { "Name": "id" },
+		"Entity": { "Name": "id_entity" },
+		"State": { "Name": "state" },
+		"Start": { "Name": "start_time" },
+		"Finish": { "Name": "finish_time"},
+		"Parent": { "Name": "id_parent" }
+	}
+  },
+  "PersonTime": {
+	"Name": "person_time",
+	"Columns": {
+		"Person": { "Name": "id_person" },
+		"Start": { "Name": "start_time" },
+		"Finish": { "Name": "finish_time"},
+		"Detail": { "Name": "id_detail" },
+		"Entity": { "Name": "id_entity"},
+		"Number": { "Name": "number" }
+	}
+  }
+}

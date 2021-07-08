@@ -10,7 +10,7 @@ CREATE TABLE entity_type (
 	id SMALLINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 	title VARCHAR(255) NOT NULL UNIQUE);
 
-INSERT entity_type (id, title) VALUES (1, 'Заказ'), (2, 'Комплект'), (3, 'Модуль'), (5, 'Узел'), (4, 'Корпус');
+INSERT entity_type (id, title) VALUES (1, 'Заказ'), (2, 'Комплект'), (3, 'Модуль'), (4, 'Корпус'), (5, 'Узел');
 
 CREATE TABLE entity (
 	id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
@@ -18,6 +18,7 @@ CREATE TABLE entity (
 	id_type SMALLINT NOT NULL,
 	specification VARCHAR(255) NOT NULL,
 	marking TINYINT NOT NULL DEFAULT 0 CHECK(marking >= 0 AND marking < 4),
+	enumerable BOOL NOT NULL DEFAULT true,
 	note VARCHAR(1023) NOT NULL,
 	UNIQUE (id_type, title),
 	FOREIGN KEY (id_type) REFERENCES entity_type(id) ON DELETE RESTRICT ON UPDATE CASCADE);
