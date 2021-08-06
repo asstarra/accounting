@@ -2,14 +2,15 @@ package qwery
 
 import (
 	s "accounting/data/db"
+	. "accounting/data/table"
 	"fmt"
 )
 
 // Выборка из таблицы tableName Id и названия, в которой Id занимает 2 байта.
 // Опционально, выборка названия по Id или где в названиях есть строка.
 // Порядок: Id, Title.
-func SelectType16(tableName string, vId *int16, vTitle *string) string {
-	table := s.Tab[tableName]
+func SelectType16(tableName TableName, vId *int16, vTitle *string) string {
+	table := s.Tab[tableName.String()]
 	sId := table.Columns["Id"].Name
 	sTitle := table.Columns["Title"].Name
 	strArr := make([]string, 1, 3)
@@ -23,21 +24,21 @@ func SelectType16(tableName string, vId *int16, vTitle *string) string {
 	return Merger(strArr)
 }
 
-func InsertType16(tableName, vTitle string) string {
-	table := s.Tab[tableName]
+func InsertType16(tableName TableName, vTitle string) string {
+	table := s.Tab[tableName.String()]
 	sTitle := table.Columns["Title"].Name
 	return fmt.Sprintf("INSERT %s (%s) VALUES ('%s')", table.Name, sTitle, vTitle)
 }
 
-func UpdateType16(tableName string, vId int16, vTitle string) string {
-	table := s.Tab[tableName]
+func UpdateType16(tableName TableName, vId int16, vTitle string) string {
+	table := s.Tab[tableName.String()]
 	sId := table.Columns["Id"].Name
 	sTitle := table.Columns["Title"].Name
 	return fmt.Sprintf("UPDATE %s SET %s = '%s' WHERE %s = %d", table.Name, sTitle, vTitle, sId, vId)
 }
 
-func DeleteType16(tableName string, vId int16) string {
-	table := s.Tab[tableName]
+func DeleteType16(tableName TableName, vId int16) string {
+	table := s.Tab[tableName.String()]
 	sId := table.Columns["Id"].Name
 	return fmt.Sprintf("DELETE FROM %s WHERE %s = %d", table.Name, sId, vId)
 }

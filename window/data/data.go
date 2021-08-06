@@ -1,6 +1,7 @@
 package data
 
 import (
+	"accounting/data/text"
 	"fmt"
 )
 
@@ -46,11 +47,23 @@ const (
 	MarkingYear                    // Маркировка по годам.
 )
 
-var MapMarkingToTitle = map[Marking]string{ // TO-DO
-	MarkingNo:   "Нет",
-	MarkingAll:  "Сквозная",
-	MarkingYear: "По годам",
+func (m Marking) Title() string { // TO-DO
+	switch m {
+	case MarkingNo:
+		return text.T.MarkingNo
+	case MarkingAll:
+		return text.T.MarkingAll
+	case MarkingYear:
+		return text.T.MarkingYear
+	}
+	return ""
 }
+
+// var MapMarkingToTitle = map[Marking]string{ // TO-DO
+// 	MarkingNo:   "Нет",
+// 	MarkingAll:  "Сквозная",
+// 	MarkingYear: "По годам",
+// }
 
 type Entity struct {
 	Id            int64             // Ид.
@@ -69,7 +82,7 @@ func NewEntity() Entity {
 
 func (e Entity) String() string {
 	return fmt.Sprintf("{Id = %d, Title = '%s', Type = %d, Enum = %v, Mark = %s, Spec = '%s', Note = '%s', Children = %v}\n",
-		e.Id, e.Title, e.Type, e.Enumerable, MapMarkingToTitle[e.Marking], e.Specification, e.Note, e.Children)
+		e.Id, e.Title, e.Type, e.Enumerable, e.Marking.Title(), e.Specification, e.Note, e.Children)
 }
 
 type IdCount struct {

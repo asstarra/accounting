@@ -5,7 +5,6 @@ var Err = struct {
 	ErrorTypeInit          string
 	ErrorCreateWindow      string
 	ErrorCreateWindowErr   string
-	ErrorUnexpectedColumn  string
 	ErrorOpenFile          string
 	ErrorReadFile          string
 	ErrorInit              string
@@ -31,26 +30,25 @@ var Err = struct {
 	ErrorUpdateMarkingLine string
 	ErrorNil               string
 }{
-	ErrorTableInit:        "При заполнении таблицы произошла ошибка",
-	ErrorTypeInit:         "Не удалось узнать список типов",
-	ErrorCreateWindow:     "Не удалось создать окно",
-	ErrorCreateWindowErr:  "Не удалось создать окно для ошибки. Текст ошибки = ",
-	ErrorUnexpectedColumn: "Обращение к неизвестному столбцу",
-	ErrorOpenFile:         "Не удалось открыть файл ",
-	ErrorReadFile:         "Не корректные данные в файле ",
-	ErrorInit:             "Ошибка инициализации",
-	ErrorOpedDB:           "Не удалось открыть соединение к базе данных",
-	ErrorPingDB:           "Не удалось подключится к базе данных",
-	ErrorQueryDB:          "Ошибка запроса к базе данных.\nСтрока запроса = \"%s\"",
-	ErrorAddDB:            "Не удалось добавить строку в базу данных.\nСтрока запроса = \"%s\"",
-	ErrorChangeDB:         "Не удалось изменить строку в базе данных.\nСтрока запроса = \"%s\"",
-	ErrorDeleteDB:         "Не удалось удалить строку из базы данных.\nСтрока запроса = \"%s\"",
-	ErrorDecryptRow:       "Не удалось расшифровать строку",
-	ErrorDecryptTime:      "Не удалось расшифровать время. Строка = \"%s\"",
-	ErrorAddRow:           "Не удалось добавить строку",
-	ErrorChangeRow:        "Не удалось изменить строку",
-	ErrorDeleteRow:        "Не удалось удалить строку",
-	ErrorInsertIndexLog:   "При вставке новой строки в базу данных не удалось узнать индекс вставляемой строки",
+	ErrorTableInit:       "При заполнении таблицы произошла ошибка",
+	ErrorTypeInit:        "Не удалось узнать список типов",
+	ErrorCreateWindow:    "Не удалось создать окно",
+	ErrorCreateWindowErr: "Не удалось создать окно для ошибки. Текст ошибки = ",
+	ErrorOpenFile:        "Не удалось открыть файл ",
+	ErrorReadFile:        "Не корректные данные в файле ",
+	ErrorInit:            "Ошибка инициализации",
+	ErrorOpedDB:          "Не удалось открыть соединение к базе данных",
+	ErrorPingDB:          "Не удалось подключится к базе данных",
+	ErrorQueryDB:         "Ошибка запроса к базе данных.\nСтрока запроса = \"%s\"",
+	ErrorAddDB:           "Не удалось добавить строку в базу данных.\nСтрока запроса = \"%s\"",
+	ErrorChangeDB:        "Не удалось изменить строку в базе данных.\nСтрока запроса = \"%s\"",
+	ErrorDeleteDB:        "Не удалось удалить строку из базы данных.\nСтрока запроса = \"%s\"",
+	ErrorDecryptRow:      "Не удалось расшифровать строку",
+	ErrorDecryptTime:     "Не удалось расшифровать время. Строка = \"%s\"",
+	ErrorAddRow:          "Не удалось добавить строку",
+	ErrorChangeRow:       "Не удалось изменить строку",
+	ErrorDeleteRow:       "Не удалось удалить строку",
+	ErrorInsertIndexLog:  "При вставке новой строки в базу данных не удалось узнать индекс вставляемой строки",
 	ErrorInsertIndex: "Это сообщение не должно показываться.\n" +
 		"При вставке новой строки в базу данных не удалось узнать индекс  вставляемой строки.\n" +
 		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке.",
@@ -63,3 +61,9 @@ var Err = struct {
 	ErrorUpdateMarkingLine: "При обновлении иерархии производственных линий произошла ошибка",
 	ErrorNil:               "Некорректные данные (nil)",
 }
+
+var (
+	NilPointer       = "invalid memory address or nil pointer dereference"
+	WrongType        = "nil pointer or incorrect type in interface"
+	UnexpectedColumn = "unexpected column"
+)

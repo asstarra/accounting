@@ -4,12 +4,14 @@ import (
 	e "accounting/data/errors"
 	l "accounting/data/log"
 	"accounting/data/qwery"
+	. "accounting/data/table"
 	"accounting/data/text"
 	. "accounting/window/data"
 	"database/sql"
 
 	// "fmt"
 	"log"
+	"sort"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
@@ -17,12 +19,12 @@ import (
 )
 
 // Выборка идентификатора и названия из таблиц типа Type.
-func SelectId16Title(db *sql.DB, tableName string, id *int16,
+func SelectId16Title(db *sql.DB, table TableName, id *int16,
 	title *string) ([]*Id16Title, map[int16]string, error) {
 	arr := make([]*Id16Title, 0, 20)
 	m := make(map[int16]string, 20)
 	if err := (func() error {
-		QwStr := qwery.SelectType16(tableName, id, title)
+		QwStr := qwery.SelectType16(table, id, title)
 		if err := db.Ping(); err != nil { // Пинг БД.
 			return errors.Wrap(err, e.Err.ErrorPingDB)
 		}
@@ -41,8 +43,8 @@ func SelectId16Title(db *sql.DB, tableName string, id *int16,
 			m[row.Id] = row.Title
 		}
 		return nil
-	}()); err != nil {
-		err = errors.Wrapf(err, l.In.InSelectId16Title, tableName, qwery.ToStr(id), qwery.ToStr(title))
+	}()); err != nil { // Обработка ошибок.
+		err = qwery.Wrapf(err, l.In.InSelectId16Title, table.String(), id, title)
 	}
 	return arr, m, nil
 }
@@ -50,8 +52,8 @@ func SelectId16Title(db *sql.DB, tableName string, id *int16,
 // Сруктура, содержащая модель таблицы.
 type modelTypeComponent struct {
 	walk.TableModelBase
+	walk.SorterBase
 	items []*Id16Title // Содержит названия.
-	item  Id16Title    // Элемент для сравнения при изменении.
 }
 
 func (m *modelTypeComponent) RowCount() int {
@@ -64,18 +66,47 @@ func (m *modelTypeComponent) Value(row, col int) interface{} {
 	case 0:
 		return item.Title
 	}
-	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn) // Лог.
-	panic(e.Err.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.UnexpectedColumn) // Лог.
+	panic(e.UnexpectedColumn)
 }
 
-func (m *modelTypeComponent) Equal(row, col int) bool {
+func (m *modelTypeComponent) Sort(col int, order walk.SortOrder) error {
+	sort.SliceStable(m.items, func(i, j int) bool {
+		a, b := m.items[i], m.items[j]
+		c := func(ls bool) bool {
+			if order == walk.SortAscending {
+				return ls
+			}
+			return !ls
+		}
+		switch col {
+		case 0:
+			return c(a.Title < b.Title)
+		}
+		log.Println(l.Panic, e.UnexpectedColumn) // Лог.
+		panic(e.UnexpectedColumn)
+	})
+	return m.SorterBase.Sort(col, order)
+}
+
+// func (m *modelTypeComponent) IsMyItem(itemPtr interface{}) bool {
+// 	val, ok := itemPtr.(*Id16Title)
+// 	return ok && val != nil
+// }
+
+func (m *modelTypeComponent) Equal(row, col int, itemPtr interface{}) bool {
+	val, ok := itemPtr.(*Id16Title)
+	if !ok || val == nil {
+		log.Println(l.Panic, e.WrongType) // Лог.
+		panic(e.WrongType)
+	}
 	item := m.items[row]
 	switch col {
 	case 0:
-		return m.item.Title == item.Title
+		return item.Title == val.Title
 	}
-	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn) // Лог.
-	panic(e.Err.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.UnexpectedColumn) // Лог.
+	panic(e.UnexpectedColumn)
 }
 
 // Структура, содержащая описание и переменные окна.
@@ -87,12 +118,12 @@ type windowsFormType struct {
 }
 
 // Инициализация модели окна.
-func newWindowsFormType(db *sql.DB, tableName string) (*windowsFormType, error) {
+func newWindowsFormType(db *sql.DB, table TableName) (*windowsFormType, error) {
 	var err error
 	wf := new(windowsFormType)
 	wf.modelTable = new(modelTypeComponent)
-	wf.modelTable.items, _, err = SelectId16Title(db, tableName, nil, nil)
-	if err != nil {
+	wf.modelTable.items, _, err = SelectId16Title(db, table, nil, nil)
+	if err != nil { // Обработка ошибок.
 		err = errors.Wrap(err, e.Err.ErrorTableInit)
 		return nil, err
 	}
@@ -100,16 +131,16 @@ func newWindowsFormType(db *sql.DB, tableName string) (*windowsFormType, error) 
 }
 
 // Описание и запуск диалогового окна для задания "типов".
-func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
-	log.Printf(l.BeginWindow, l.Type)            // Лог.
-	wf, err := newWindowsFormType(db, tableName) // Инициализация.
-	if err != nil {
+func TypeRunDialog(owner walk.Form, db *sql.DB, table TableName) (int, error) {
+	log.Printf(l.BeginWindow, l.Type)        // Лог.
+	wf, err := newWindowsFormType(db, table) // Инициализация.
+	if err != nil {                          // Обработка ошибок.
 		return 0, errors.Wrap(err, e.Err.ErrorInit)
 	}
 	log.Printf(l.InitWindow, l.Type) // Лог.
 	if err := (dec.Dialog{           // Описание окна.
-		AssignTo: &wf.Dialog,                  // Привязка окна.
-		Title:    text.HeadingType[tableName], // Название.
+		AssignTo: &wf.Dialog,      // Привязка окна.
+		Title:    table.Heading(), // Название.
 		Layout:   dec.VBox{MarginsZero: true},
 		Children: []dec.Widget{ // Элементы окна.
 			dec.HSplitter{
@@ -119,46 +150,46 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 						Children: []dec.Widget{
 							dec.TableView{ // Таблица.
 								AssignTo: &wf.tv, // Привязка к виджету.
-								Columns: []dec.TableViewColumn{
-									{Title: text.TitleType[tableName]},
+								Columns: []dec.TableViewColumn{ // Столбцы
+									{Title: table.Title(), Width: 120},
 								},
-								MinSize: dec.Size{120, 0},
+								MinSize: dec.Size{130, 0},
 								Model:   wf.modelTable, // Привязка к модели.
 							},
 						},
-					}, // Правая половина.
-					dec.Composite{
+					},
+					dec.Composite{ // Правая половина.
 						Layout: dec.VBox{},
 						Children: []dec.Widget{
 							dec.LineEdit{ // Текстовая строка.
 								AssignTo:  &wf.textW, // Привязка к виджету.
 								MaxLength: 255,       // Ограничение на количество букв.
-								MinSize:   dec.Size{120, 0},
+								MinSize:   dec.Size{140, 0},
 							},
 							dec.PushButton{ // Кнопка добавить.
 								Text: text.T.ButtonAdd,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogAdd)                 // Лог.
-									if err := wf.add(db, tableName); err != nil { // Обработка ошибки.
-										MsgBoxAdd(wf, err)
+									log.Println(l.Info, l.LogAdd)             // Лог.
+									if err := wf.add(db, table); err != nil { // Обработка ошибки.
+										MsgBoxError(wf, err, e.Err.ErrorAddRow)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка изменить.
 								Text: text.T.ButtonChange,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogChange)                 // Лог.
-									if err := wf.change(db, tableName); err != nil { // Обработка ошибки.
-										MsgBoxChange(wf, err)
+									log.Println(l.Info, l.LogChange)             // Лог.
+									if err := wf.change(db, table); err != nil { // Обработка ошибки.
+										MsgBoxError(wf, err, e.Err.ErrorChangeRow)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка удалить.
 								Text: text.T.ButtonDelete,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogDelete)                 // Лог.
-									if err := wf.delete(db, tableName); err != nil { // Обработка ошибки.
-										MsgBoxDelete(wf, err)
+									log.Println(l.Info, l.LogDelete)             // Лог.
+									if err := wf.delete(db, table); err != nil { // Обработка ошибки.
+										MsgBoxError(wf, err, e.Err.ErrorDeleteRow)
 									}
 								},
 							},
@@ -167,8 +198,8 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 				},
 			},
 		},
-	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, e.Err.ErrorCreateWindow) // Обработка ошибки создания окна.
+	}.Create(owner)); err != nil { // Обработка ошибки создания окна.
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow)
 		return 0, err
 	}
 	log.Printf(l.CreateWindow, l.Type) // Лог.
@@ -178,13 +209,13 @@ func TypeRunDialog(owner walk.Form, db *sql.DB, tableName string) (int, error) {
 }
 
 // Функция, для добавления строки в таблицу.
-func (wf *windowsFormType) add(db *sql.DB, tableName string) error {
+func (wf *windowsFormType) add(db *sql.DB, table TableName) error {
 	// Обработка ограничинения на пустую строку и повторяемость значений.
-	wf.modelTable.item = Id16Title{Id: 0, Title: wf.textW.Text()}
-	if IsStringEmpty(wf, wf.modelTable.item.Title) || IsRepeat(wf, wf.modelTable, []int{0}) {
+	item := Id16Title{Id: 0, Title: wf.textW.Text()}
+	if IsStringEmpty(wf, item.Title) || IsRepeat(wf, wf.modelTable, []int{0}, &item) {
 		return nil
 	}
-	QwStr := qwery.InsertType16(tableName, wf.modelTable.item.Title)
+	QwStr := qwery.InsertType16(table, item.Title)
 	if err := db.Ping(); err != nil { // Пинг БД.
 		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
@@ -195,12 +226,12 @@ func (wf *windowsFormType) add(db *sql.DB, tableName string) error {
 	if id, err := result.LastInsertId(); err != nil { // Выбор Id.
 		MsgBoxNotInsertedId(wf, err)
 	} else {
-		wf.modelTable.item.Id = int16(id)
+		item.Id = int16(id)
 	}
 	wf.textW.SetText("") // Обнуление текстовой строки.
 	// Обновление таблицы.
 	trackLatest := wf.tv.ItemVisible(len(wf.modelTable.items) - 1)
-	wf.modelTable.items = append(wf.modelTable.items, &wf.modelTable.item)
+	wf.modelTable.items = append(wf.modelTable.items, &item)
 	index := len(wf.modelTable.items) - 1
 	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowsInserted(index, index)
@@ -211,18 +242,18 @@ func (wf *windowsFormType) add(db *sql.DB, tableName string) error {
 }
 
 // Функция, для изменения строки в таблице.
-func (wf *windowsFormType) change(db *sql.DB, tableName string) error {
+func (wf *windowsFormType) change(db *sql.DB, table TableName) error {
 	// Обработка ограничинения на пустую строку и повторяемость значений.
-	wf.modelTable.item = Id16Title{Id: 0, Title: wf.textW.Text()}
-	if IsStringEmpty(wf, wf.modelTable.item.Title) || IsRepeat(wf, wf.modelTable, []int{0}) {
+	item := Id16Title{Id: 0, Title: wf.textW.Text()}
+	if IsStringEmpty(wf, item.Title) || IsRepeat(wf, wf.modelTable, []int{0}, &item) {
 		return nil
 	}
 	// Проверка на выделение изменяемой строчки и возможность ее изменения.
-	if IsCorrectIndex(wf, wf.modelTable, wf.tv) || wf.isConstraint(tableName) {
+	if IsCorrectIndex(wf, wf.modelTable, wf.tv) || wf.isConstraint(table) {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
-	QwStr := qwery.UpdateType16(tableName, wf.modelTable.items[index].Id, wf.textW.Text())
+	QwStr := qwery.UpdateType16(table, wf.modelTable.items[index].Id, wf.textW.Text())
 	if err := db.Ping(); err != nil { // Пинг БД.
 		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
@@ -231,20 +262,20 @@ func (wf *windowsFormType) change(db *sql.DB, tableName string) error {
 	}
 	// Обновление таблицы и текстовой строки.
 	wf.textW.SetText("")
-	wf.modelTable.items[index].Title = wf.modelTable.item.Title
+	wf.modelTable.items[index].Title = item.Title
 	wf.modelTable.PublishRowsReset()
 	wf.modelTable.PublishRowChanged(index)
 	return nil
 }
 
 // Функция, для удаления строки из таблицы.
-func (wf *windowsFormType) delete(db *sql.DB, tableName string) error {
+func (wf *windowsFormType) delete(db *sql.DB, table TableName) error {
 	// Проверка на выделение изменяемой строчки и возможность ее изменения.
-	if IsCorrectIndex(wf, wf.modelTable, wf.tv) || wf.isConstraint(tableName) {
+	if IsCorrectIndex(wf, wf.modelTable, wf.tv) || wf.isConstraint(table) {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
-	QwStr := qwery.DeleteType16(tableName, wf.modelTable.items[index].Id)
+	QwStr := qwery.DeleteType16(table, wf.modelTable.items[index].Id)
 	if err := db.Ping(); err != nil { // Пинг БД.
 		return errors.Wrap(err, e.Err.ErrorPingDB)
 	}
@@ -265,12 +296,12 @@ func (wf *windowsFormType) delete(db *sql.DB, tableName string) error {
 
 // Функция, которая проверяет ограничения при изменении и удалении,
 // которые зависят от имени таблицы. Строчка должна быть выделена.
-func (wf *windowsFormType) isConstraint(tableName string) bool {
+func (wf *windowsFormType) isConstraint(table TableName) bool {
 	index := wf.tv.CurrentIndex()
 	id := wf.modelTable.items[index].Id
-	switch tableName { // TO-DO Для других типов.
-	case "EntityType":
-		if id >= 1 || id <= 5 {
+	switch table { // TO-DO Для других типов.
+	case TableEntityType:
+		if id >= 1 && id <= 5 {
 			MsgBoxNotChange(wf)
 			return true
 		}

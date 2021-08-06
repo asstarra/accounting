@@ -130,13 +130,13 @@ func ToIntfs(strs []string) []interface{} {
 	return arr
 }
 
-func Printf(format string, arr ...interface{}) string {
+func Sprintf(format string, arr ...interface{}) string {
 	var strs = ToIntfs(ToStrs(arr))
 	return fmt.Sprintf(format, strs...)
 }
 
 func Wrapf(err error, format string, arr ...interface{}) error {
-	return errors.Wrap(err, Printf(format, arr))
+	return errors.Wrap(err, Sprintf(format, arr))
 }
 
 func Wrap(err error, message string) error {

@@ -5,6 +5,7 @@ import (
 	e "accounting/data/errors"
 	l "accounting/data/log"
 	"accounting/data/qwery"
+	. "accounting/data/table"
 	"accounting/data/text"
 	. "accounting/window/data"
 	"database/sql"
@@ -38,12 +39,12 @@ func (m *modelEntitiesComponent) Value(row, col int) interface{} { // TO-DO
 	case 2:
 		return item.Specification
 	case 3:
-		return MapMarkingToTitle[item.Marking]
+		return item.Marking.Title()
 	case 4:
 		return item.Note
 	}
-	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn)
-	panic(e.Err.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.UnexpectedColumn)
+	panic(e.UnexpectedColumn)
 }
 
 // Инициализация модели таблицы.
@@ -74,7 +75,7 @@ func newWindowsFormEntities(db *sql.DB, isChange bool) (*windowsFormEntities, er
 		err = errors.Wrap(err, e.Err.ErrorTableInit)
 		return nil, err
 	}
-	wf.modelType, wf.modelTable.mapIdToTitle, err = SelectId16Title(db, "EntityType", nil, nil)
+	wf.modelType, wf.modelTable.mapIdToTitle, err = SelectId16Title(db, TableEntityType, nil, nil)
 	if err != nil {
 		err = errors.Wrap(err, e.Err.ErrorTypeInit)
 		return nil, err

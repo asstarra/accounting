@@ -100,8 +100,8 @@ func (m *modelMarkedDetailsComponent) Value(row, col int) interface{} {
 	case 2:
 		return m.Map3.MarkedDetailMinToString(item.Parent)
 	}
-	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn)
-	panic(e.Err.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.UnexpectedColumn)
+	panic(e.UnexpectedColumn)
 }
 
 // Описание и запуск диалогового окна.

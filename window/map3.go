@@ -3,6 +3,7 @@ package window
 import (
 	e "accounting/data/errors"
 	l "accounting/data/log"
+	. "accounting/data/table"
 	. "accounting/window/data"
 	"database/sql"
 	"fmt"
@@ -27,7 +28,7 @@ func NewMap3(db *sql.DB, isAllEntities bool) (Map3, error) {
 		err = errors.Wrap(err, e.Err.ErrorSubquery)
 		return m, err
 	}
-	_, m.mapIdToEntityType, err = SelectId16Title(db, "EntityType", nil, nil)
+	_, m.mapIdToEntityType, err = SelectId16Title(db, TableEntityType, nil, nil)
 	if err != nil {
 		err = errors.Wrap(err, e.Err.ErrorTypeInit)
 		return m, err

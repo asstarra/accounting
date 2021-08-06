@@ -1,25 +1,25 @@
 package window
 
 import (
-	"accounting/data"
 	e "accounting/data/errors"
 	l "accounting/data/log"
 	"accounting/data/qwery"
+	. "accounting/data/table"
 	"accounting/data/text"
 	. "accounting/window/data"
 	"database/sql"
 
 	// "fmt"
 	"log"
+	"sort"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
 	"github.com/pkg/errors"
 )
 
-// Выборка из таблицы Entity всех ее полей удовлетворяющих условию, GO-TO
-// где в значения поля Title входит title,
-// значение поля Type равно entityType (при 0, разрешен любой тип),
+// Выборка из таблицы "Entity" по заданным параметрам.
+// Порядок: Id, Title, Type, Enum, Mark, Specification, Note.
 // isChange определяет, разрешено ли выбирать строчки, где тип сущности это заказ.
 // Информация о дочерних сущностях не выбирается.
 func SelectEntity(db *sql.DB, id *int64, title *string, eType *int16, enum *bool,
@@ -45,14 +45,15 @@ func SelectEntity(db *sql.DB, id *int64, title *string, eType *int16, enum *bool
 		}
 		return nil
 	}()); err != nil {
-		return arr, errors.Wrapf(err, l.In.InSelectEntity, title, eType) //GO-TO
+		return arr, qwery.Wrapf(err, l.In.InSelectEntity, id, title, eType, enum, mark, isChange)
 	}
 	return arr, nil
 }
 
 // Сруктура, содержащая модель таблицы.
-type modelEntityComponent struct { //GO-TO rename.
+type modelEntityComponent struct {
 	walk.TableModelBase
+	walk.SorterBase
 	items []*EntityRecChild // Список дочерних компонентов.
 }
 
@@ -68,8 +69,46 @@ func (m *modelEntityComponent) Value(row, col int) interface{} {
 	case 1:
 		return item.Count
 	}
-	log.Println(l.Panic, e.Err.ErrorUnexpectedColumn)
-	panic(e.Err.ErrorUnexpectedColumn)
+	log.Println(l.Panic, e.UnexpectedColumn)
+	panic(e.UnexpectedColumn)
+}
+
+func (m *modelEntityComponent) Sort(col int, order walk.SortOrder) error {
+	sort.SliceStable(m.items, func(i, j int) bool {
+		a, b := m.items[i], m.items[j]
+		c := func(ls bool) bool {
+			if order == walk.SortAscending {
+				return ls
+			}
+			return !ls
+		}
+		switch col {
+		case 0:
+			return c(a.Title < b.Title)
+		case 1:
+			return c(a.Count < b.Count)
+		}
+		log.Println(l.Panic, e.UnexpectedColumn) // Лог.
+		panic(e.UnexpectedColumn)
+	})
+	return m.SorterBase.Sort(col, order)
+}
+
+func (m *modelEntityComponent) Equal(row, col int, itemPtr interface{}) bool {
+	val, ok := itemPtr.(*EntityRecChild)
+	if !ok || val == nil {
+		log.Println(l.Panic, e.WrongType) // Лог.
+		panic(e.WrongType)
+	}
+	item := m.items[row]
+	switch col {
+	case 0:
+		return item.Title == val.Title
+	case 1:
+		return item.Count == val.Count
+	}
+	log.Println(l.Panic, e.UnexpectedColumn) // Лог.
+	panic(e.UnexpectedColumn)
 }
 
 // Структура, содержащая описание и переменные окна.
@@ -87,7 +126,7 @@ func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error
 	wf := new(windowsFormEntity)
 	wf.modelTable = new(modelEntityComponent)
 	wf.modelTable.items = entity.Children
-	wf.modelType, wf.mapIdToTitle, err = SelectId16Title(db, "EntityType", nil, nil)
+	wf.modelType, wf.mapIdToTitle, err = SelectId16Title(db, TableEntityType, nil, nil)
 	if err != nil {
 		err = errors.Wrap(err, e.Err.ErrorTypeInit)
 		return nil, err
@@ -98,7 +137,6 @@ func newWindowsFormEntity(db *sql.DB, entity *Entity) (*windowsFormEntity, error
 // Описание и запуск диалогового окна.
 func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 	log.Printf(l.BeginWindow, l.Entity) // Лог.
-	sButtonAdd := " компонент"          // GO-TO возможно нужно? вынести строку
 	var databind *walk.DataBinder       // Инициализация
 	wf, err := newWindowsFormEntity(db, entity)
 	if err != nil {
@@ -116,13 +154,13 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 		},
 		Layout: dec.VBox{MarginsZero: true},
 		Children: []dec.Widget{
-			dec.HSplitter{ // Левая половина.
+			dec.HSplitter{
 				Children: []dec.Widget{
-					dec.Composite{
+					dec.Composite{ // Левая половина.
 						Layout: dec.Grid{Columns: 2},
 						Children: []dec.Widget{
 							dec.Label{ // Лэйбэл название.
-								Text: "Название:", // TO-DO
+								Text: text.T.LabelTitle,
 							},
 							dec.LineEdit{ // Текстова строка для названия.
 								MaxLength: 255,
@@ -131,7 +169,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							},
 
 							dec.Label{ // Лэйбэл тип.
-								Text: "Тип:", // TO-DO
+								Text: text.T.LabelType,
 							},
 							dec.ComboBox{ // Выпадающий список для выбора типа.
 								Value:         dec.Bind("Type", dec.SelRequired{}),
@@ -140,25 +178,27 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 								Model:         wf.modelType,
 							},
 
-							dec.Label{ // Лэйбэл считаемость. // TO-DO
-								ColumnSpan: 2,
-								Text:       "Считаемость:", // TO-DO
+							dec.CheckBox{
+								ColumnSpan:     2,
+								Text:           text.T.LabelEnumerable,
+								TextOnLeftSide: true,
+								Checked:        dec.Bind("Enumerable"),
 							},
 
 							dec.RadioButtonGroupBox{ // Выбор способа маркировки
 								ColumnSpan: 2,
-								Title:      "Маркировка:", // TO-DO
+								Title:      text.T.LabelMarking,
 								Layout:     dec.HBox{},
 								DataMember: "Marking",
 								Buttons: []dec.RadioButton{
-									{Text: MapMarkingToTitle[MarkingNo], Value: MarkingNo},
-									{Text: MapMarkingToTitle[MarkingAll], Value: MarkingAll},
-									{Text: MapMarkingToTitle[MarkingYear], Value: MarkingYear},
+									{Text: MarkingNo.Title(), Value: MarkingNo},
+									{Text: MarkingAll.Title(), Value: MarkingAll},
+									{Text: MarkingYear.Title(), Value: MarkingYear},
 								},
 							},
 
 							dec.Label{ // Лэйбэл спецификация.
-								Text: "Спецификация:", // TO-DO
+								Text: text.T.LabelSpecification,
 							},
 							dec.LineEdit{ // Текстовая строка.
 								MaxLength: 255,
@@ -167,7 +207,7 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 
 							dec.Label{ // Лэйбэл примичание.
 								ColumnSpan: 2,
-								Text:       "Примечание:", // TO-DO
+								Text:       text.T.LabelNote,
 							},
 							dec.TextEdit{ // Текстовое поле для примечания.
 								ColumnSpan: 2,
@@ -177,19 +217,19 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							},
 						},
 					},
-					dec.Composite{
+					dec.Composite{ // Правая половина.
 						Layout:  dec.Grid{Columns: 2},
 						MinSize: dec.Size{230, 300},
 						Children: []dec.Widget{
 							dec.Label{ // Лэйбэл компоненты.
 								ColumnSpan: 2,
-								Text:       "Компоненты:", // TO-DO
+								Text:       text.T.LabelComponents,
 							},
 							dec.TableView{ // Таблица с дочерними компонентами.
 								AssignTo: &wf.tv, // Привязка к виджету.
 								Columns: []dec.TableViewColumn{
-									{Title: "Название"},   // TO-DO
-									{Title: "Количество"}, // TO-DO
+									{Title: text.T.ColumnTitle, Width: 120},
+									{Title: text.T.ColumnCount, Width: 80},
 								},
 								ColumnSpan: 2,
 								Model:      wf.modelTable, // Привязка к модели.
@@ -197,37 +237,31 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 
 							dec.PushButton{ // Кнопка добавить дочерний компонент.
 								ColumnSpan: 2,
-								Text:       text.T.ButtonAdd + sButtonAdd,
+								Text:       text.T.ButtonAdd + text.T.SuffixComponent,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogAdd) // Лог.
-									if err := wf.add(db, entity); err != nil {
-										err = errors.Wrap(err, e.Err.ErrorAddRow) // Обработка ошибок.
-										log.Println(l.Error, err)                 // Лог.
-										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+									log.Println(l.Info, l.LogAdd)              // Лог.
+									if err := wf.add(db, entity); err != nil { // Обработка ошибок.
+										MsgBoxError(wf, err, e.Err.ErrorAddRow)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка изменения дочернего компонента.
 								ColumnSpan: 2,
-								Text:       text.T.ButtonChange + sButtonAdd,
+								Text:       text.T.ButtonChange + text.T.SuffixComponent,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogChange) // Лог.
-									if err := wf.change(db, entity); err != nil {
-										err = errors.Wrap(err, e.Err.ErrorChangeRow) // Обработка ошибок.
-										log.Println(l.Error, err)                    // Лог.
-										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+									log.Println(l.Info, l.LogChange)              // Лог.
+									if err := wf.change(db, entity); err != nil { // Обработка ошибок.
+										MsgBoxError(wf, err, e.Err.ErrorChangeRow)
 									}
 								},
 							},
 							dec.PushButton{ // Кнопка удаления дочернего компонента.
 								ColumnSpan: 2,
-								Text:       text.T.ButtonDelete + sButtonAdd,
+								Text:       text.T.ButtonDelete + text.T.SuffixComponent,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogDelete) // Лог.
-									if err := wf.delete(db, entity); err != nil {
-										err = errors.Wrap(err, e.Err.ErrorDeleteRow) // Обработка ошибок.
-										log.Println(l.Error, err)                    // Лог.
-										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+									log.Println(l.Info, l.LogDelete)              // Лог.
+									if err := wf.delete(db, entity); err != nil { // Обработка ошибок.
+										MsgBoxError(wf, err, e.Err.ErrorDeleteRow)
 									}
 								},
 							},
@@ -235,11 +269,12 @@ func EntityRunDialog(owner walk.Form, db *sql.DB, entity *Entity) (int, error) {
 							dec.PushButton{ // Кнопка Ок.
 								Text: text.T.ButtonOK,
 								OnClicked: func() {
-									log.Println(l.Info, l.LogOk) // Лог.
-									if err := databind.Submit(); err != nil {
-										err = errors.Wrap(err, e.Err.ErrorSubmit) // Обработка ошибок.
-										log.Println(l.Error, err)                 // Лог.
-										walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+									log.Println(l.Info, l.LogOk)              // Лог.
+									if err := databind.Submit(); err != nil { // Обработка ошибок.
+										MsgBoxError(wf, err, e.Err.ErrorSubmit)
+										return
+									}
+									if IsStringEmpty(wf, entity.Title) {
 										return
 									}
 									entity.Children = wf.modelTable.items
@@ -279,10 +314,14 @@ func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 	if cmd != walk.DlgCmdOK {
 		return nil
 	}
+	if IsRepeat(wf, wf.modelTable, []int{1}, &child) {
+		return nil
+	}
 	// Изменение БД при добавлении дочерней детали в составе(entity_rec), когда
 	// родительская деталь не внесена БД происходит в entities.go при добавлении
 	// родительской детали в БД.
 	if entity.Id != 0 { // Здесь добавляем дочернюю сущность при известной родительской.
+		// Проверяем на зацикленость состав.
 		s, err := checkEntityRec(db, entity.Id, []*EntityRecChild{&child})
 		if err != nil {
 			return err
@@ -300,8 +339,7 @@ func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 			return errors.Wrapf(err, e.Err.ErrorAddDB, QwStr)
 		}
 		if id, err := result.LastInsertId(); err != nil {
-			log.Println(l.Error, errors.Wrap(err, e.Err.ErrorInsertIndexLog))               // Лог.
-			walk.MsgBox(wf, text.T.MsgBoxError, e.Err.ErrorInsertIndex, data.Icon.Critical) // TO-DO
+			MsgBoxNotInsertedId(wf, err)
 		} else {
 			child.Id = id
 		}
@@ -320,8 +358,7 @@ func (wf *windowsFormEntity) add(db *sql.DB, entity *Entity) error {
 
 // Функция, для изменения строки в таблице.
 func (wf *windowsFormEntity) change(db *sql.DB, entity *Entity) error {
-	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
+	if IsCorrectIndex(wf, wf.modelTable, wf.tv) {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
@@ -353,8 +390,7 @@ func (wf *windowsFormEntity) change(db *sql.DB, entity *Entity) error {
 
 // Функция, для удаления строки из таблицы.
 func (wf *windowsFormEntity) delete(db *sql.DB, entity *Entity) error {
-	if wf.modelTable.RowCount() <= 0 || wf.tv.CurrentIndex() == -1 {
-		walk.MsgBox(wf, text.T.MsgBoxInfo, text.T.MsgChooseRow, data.Icon.Info)
+	if IsCorrectIndex(wf, wf.modelTable, wf.tv) {
 		return nil
 	}
 	index := wf.tv.CurrentIndex()
@@ -407,4 +443,9 @@ func checkEntityRec(db *sql.DB, parent int64, children []*EntityRecChild) (strin
 		}
 	}
 	return "", nil
+}
+
+func deleteMarkingLineEnd(db *sql.DB, end int64) (bool, error) {
+
+	return false, nil
 }

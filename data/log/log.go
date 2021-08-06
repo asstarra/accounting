@@ -41,7 +41,6 @@ var In = struct {
 
 	InSelectEntity            string
 	InSelectEntityRecChild    string
-	InSelectEntityRec         string
 	InSelectId16Title         string
 	InSelectMarkingLineNew    string
 	InSelectMarkingLineOld    string
@@ -55,16 +54,15 @@ var In = struct {
 	InSelectQualification   string
 	InNewQualificationTable string
 }{
-	InEntitiesRunDialog:      "In EntitiesRunDialog(isChage = %t, IdTitle = %v)",
+	InEntitiesRunDialog:      "In EntitiesRunDialog(isChange = %t, IdTitle = %v)",
 	InEntityRunDialog:        "In EntityRunDialog(entity = %v)",
 	InEntityRecRunDialog:     "In EntityRecRunDialog(child = %v)",
 	InTypeRunDialog:          "In TypeRunDialog(tableName = %s)",
 	InMarkedDetailRunDialog:  "In MarkedDetailRunDialog(detail = %v)",
 	InMarkedDetailsRunDialog: "In MarkedDetailsRunDialog(isChage = %t, parent detail = %v)",
 
-	InSelectEntity:            "In SelectEntities(title = \"%s\", entityType = %d)",
+	InSelectEntity:            "In SelectEntity(id = %s, title = \"%s\", type = %s, enum = %s, mark = %s, isChange = %v)",
 	InSelectEntityRecChild:    "In SelectEntityRecChild(parent = %d)",
-	InSelectEntityRec:         "In SelectEntityRec()",
 	InSelectId16Title:         "In SelectId16Title(tableName = %s, id = %s, title = %s)",
 	InSelectMarkingLineNew:    "In SelectMarkingLineNew()",
 	InSelectMarkingLineOld:    "In SelectMarkingLineOld()",

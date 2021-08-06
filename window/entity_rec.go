@@ -1,16 +1,12 @@
 package window
 
 import (
-	"accounting/data"
 	e "accounting/data/errors"
 	l "accounting/data/log"
 	"accounting/data/qwery"
 	"accounting/data/text"
 	. "accounting/window/data"
-
-	// "accounting/window"
 	"database/sql"
-	// "fmt"
 	"log"
 
 	"github.com/lxn/walk"
@@ -19,8 +15,10 @@ import (
 )
 
 // Поиск дочерних сущностей для заданной сущности (id родительской таблицы = parent).
-// Выборка из таблицы EntityRec id дочерней таблицы и количества.
-// Поле title = тип сущности + название сущности.
+// Выборка из таблицы EntityRec:
+// 1) id родителя, id ребенка, описание дочерней сущности, количество
+// 2) id ребенка, описание дочерней сущности, количество
+// Описание дочерней сущности включает в себя название типа сущности + название сущности.
 func SelectEntityRecChild(db *sql.DB, parent *int64) ([]*EntityRec, []*EntityRecChild, error) {
 	arr := make([]*EntityRec, 0, 1000)
 	if err := (func() error {
@@ -44,12 +42,12 @@ func SelectEntityRecChild(db *sql.DB, parent *int64) ([]*EntityRec, []*EntityRec
 			arr = append(arr, &row)
 		}
 		return nil
-	}()); err != nil {
-		return arr, []*EntityRecChild{}, errors.Wrapf(err, l.In.InSelectEntityRecChild, parent)
+	}()); err != nil { // Обработка ошибок.
+		return arr, []*EntityRecChild{}, qwery.Wrapf(err, l.In.InSelectEntityRecChild, parent)
 	}
 	childs := make([]*EntityRecChild, 0, len(arr))
 	for _, val := range arr {
-		childs = append(childs, &(val.EntityRecChild)) //GO-TO проверить совпадения адресов.
+		childs = append(childs, &(val.EntityRecChild))
 	}
 	return arr, childs, nil
 }
@@ -63,7 +61,13 @@ type windowsFormEntityRec struct {
 // Описание и запуск диалогового окна.
 func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *EntityRecChild) (int, error) {
 	log.Printf(l.BeginWindow, l.EntityRec) // Лог.
-	var databind *walk.DataBinder          // Иициализация.
+	if child == nil {
+		return 0, errors.New(e.NilPointer)
+	}
+	if child.Title == "" {
+		child.Title = text.T.ButtonChoose
+	}
+	var databind *walk.DataBinder // Иициализация.
 	wf := windowsFormEntityRec{}
 	log.Printf(l.InitWindow, l.EntityRec) // Лог.
 	if err := (dec.Dialog{                // Описание окна.
@@ -81,7 +85,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 				Layout: dec.Grid{Columns: 2},
 				Children: []dec.Widget{
 					dec.Label{ // Лэйбел название.
-						Text: "Название:", //GO-TO
+						Text: text.T.LabelTitle,
 					},
 					dec.PushButton{ // Кнопка для выбора дочерней "Entity"
 						AssignTo: &wf.entitiesBW, // Привязка к виджету.
@@ -91,9 +95,7 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 						OnClicked: func() {
 							log.Println(l.Info, l.LogChoose)
 							if err := (func() error {
-								log.Println(l.Info, "Выбор") // Лог. GO-TO
 								idTitle := child.Id64Title
-								// var it = window.IdTitle{Id: idTitle.Id, Title: idTitle.Title} //GO-TO
 								cmd, err := EntitiesRunDialog(wf, db, false, &idTitle)
 								log.Printf(l.EndWindow, l.Entities, cmd) // Лог.
 								if err != nil {
@@ -104,20 +106,18 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 									wf.entitiesBW.SetText(child.Title)
 								}
 								return nil
-							}()); err != nil {
-								err = errors.Wrap(err, e.Err.ErrorChoose) // Обработка ошибки.
-								log.Println(l.Error, err)                 // Лог.
-								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+							}()); err != nil { // Обработка ошибки.
+								MsgBoxError(wf, err, e.Err.ErrorChoose)
 							}
 						},
 					},
 
 					dec.Label{ // Лэйбел количество.
-						Text: "Количество:", //GO-TO
+						Text: text.T.LabelCount,
 					},
 					dec.NumberEdit{ // Числовое поле. Количество штук.
 						Value:    dec.Bind("Count", dec.Range{0, 1000}),
-						Suffix:   " шт",
+						Suffix:   text.T.SuffixPieces,
 						Decimals: 0,
 					},
 				},
@@ -128,11 +128,9 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 					dec.PushButton{ // Кнопка Ок.
 						Text: text.T.ButtonOK,
 						OnClicked: func() {
-							log.Println(l.Info, l.LogOk) // Лог.
-							if err := databind.Submit(); err != nil {
-								err = errors.Wrap(err, e.Err.ErrorSubmit) // Обработка ошибки.
-								log.Println(l.Error, err)                 // Лог.
-								walk.MsgBox(wf, text.T.MsgBoxError, MsgError(err), data.Icon.Error)
+							log.Println(l.Info, l.LogOk)              // Лог.
+							if err := databind.Submit(); err != nil { // Обработка ошибки.
+								MsgBoxError(wf, err, e.Err.ErrorSubmit)
 								return
 							}
 							wf.Accept()
@@ -148,8 +146,8 @@ func EntityRecRunDialog(owner walk.Form, db *sql.DB, isChange bool, child *Entit
 				},
 			},
 		},
-	}.Create(owner)); err != nil {
-		err = errors.Wrap(err, e.Err.ErrorCreateWindow) // Обработка ошибки создания окна.
+	}.Create(owner)); err != nil { // Обработка ошибки создания окна.
+		err = errors.Wrap(err, e.Err.ErrorCreateWindow)
 		return 0, err
 	}
 	log.Printf(l.CreateWindow, l.EntityRec) // Лог.

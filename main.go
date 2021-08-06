@@ -14,6 +14,7 @@ import (
 	e "accounting/data/errors"
 	l "accounting/data/log"
 	"accounting/data/qwery"
+	. "accounting/data/table"
 	"accounting/optimization"
 	"accounting/window"
 	// "accounting/window2"
@@ -92,7 +93,7 @@ func main() {
 	var b int32 = 7
 	var c int8 = 8
 	fmt.Println(qwery.ToStr(&b), qwery.ToStr(b), qwery.ToStr(&c))
-	fmt.Println(qwery.Printf("%s, %s, %s, %s", &a, &b, 874.3, c))
+	fmt.Println(qwery.Sprintf("%s, %s, %s, %s", &a, &b, 874.3, c))
 
 	var mw *walk.MainWindow
 	if err := (dec.MainWindow{
@@ -125,7 +126,7 @@ func main() {
 			dec.PushButton{
 				Text: "EntityType",
 				OnClicked: func() {
-					cmd, err := window.TypeRunDialog(mw, db, "EntityType")
+					cmd, err := window.TypeRunDialog(mw, db, TableEntityType)
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
@@ -135,7 +136,7 @@ func main() {
 			dec.PushButton{
 				Text: "StatusType",
 				OnClicked: func() {
-					cmd, err := window.TypeRunDialog(mw, db, "StatusType")
+					cmd, err := window.TypeRunDialog(mw, db, TableStatusType)
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
@@ -145,7 +146,7 @@ func main() {
 			dec.PushButton{
 				Text: "Person",
 				OnClicked: func() {
-					cmd, err := window.TypeRunDialog(mw, db, "Person")
+					cmd, err := window.TypeRunDialog(mw, db, TablePerson)
 					if err != nil {
 						log.Println("ERROR!", err)
 					}
@@ -155,7 +156,7 @@ func main() {
 			dec.PushButton{
 				Text: "Operation",
 				OnClicked: func() {
-					cmd, err := window.TypeRunDialog(mw, db, "Operation")
+					cmd, err := window.TypeRunDialog(mw, db, TableOperation)
 					if err != nil {
 						log.Println("ERROR!", err)
 					}

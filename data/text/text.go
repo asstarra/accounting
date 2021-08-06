@@ -1,5 +1,9 @@
 package text
 
+// import (
+// 	. "accounting/data/table"
+// )
+
 var T = struct {
 	MsgBoxError   string
 	MsgBoxWarning string
@@ -12,14 +16,27 @@ var T = struct {
 
 	MsgInsertedIndex string
 
-	HeadingEntity        string
 	HeadingEntities      string
+	HeadingEntity        string
 	HeadingEntityRec     string
 	HeadingEntityType    string
 	HeadingMarkedDetail  string
 	HeadingMarkedDetails string
 
-	TextEntityTypeTitle string
+	ColumnCount string
+	ColumnTitle string
+
+	LabelEnumerable    string
+	LabelCount         string
+	LabelComponents    string
+	LabelMarking       string
+	LabelNote          string
+	LabelSpecification string
+	LabelTitle         string
+	LabelType          string
+
+	SuffixPieces    string
+	SuffixComponent string
 
 	ButtonOK     string
 	ButtonCansel string
@@ -27,6 +44,11 @@ var T = struct {
 	ButtonChange string
 	ButtonDelete string
 	ButtonSearch string
+	ButtonChoose string
+
+	MarkingNo   string
+	MarkingAll  string
+	MarkingYear string
 }{
 	MsgBoxError:   "Ошибка!",
 	MsgBoxWarning: "Внимание!",
@@ -39,16 +61,29 @@ var T = struct {
 
 	MsgInsertedIndex: "Это сообщение не должно показываться.\n" +
 		"При вставке новой строки в базу данных не удалось узнать индекс  вставляемой строки.\n" +
-		"Следует перезапустить программу и проверить корректность данных в последней вставленной строке.",
+		"Следует проверить корректность данных в последней вставленной строке и перезапустить программу.",
 
-	HeadingEntity:        "Учет - Сущность",
-	HeadingEntities:      "Учет - Сущности",
+	HeadingEntities:      "Учет - Список компонентов",
+	HeadingEntity:        "Учет - Компонент",
 	HeadingEntityRec:     "Учет - Дочерний компонент",
 	HeadingEntityType:    "Учет - Типы компонентов",
 	HeadingMarkedDetail:  "Учет - Маркировка детали",
 	HeadingMarkedDetails: "Учет - Список деталей",
 
-	TextEntityTypeTitle: "Название",
+	ColumnCount: "Количество",
+	ColumnTitle: "Название",
+
+	LabelEnumerable:    "Можно сосчитать:  ",
+	LabelCount:         "Количество:",
+	LabelComponents:    "Компоненты:",
+	LabelMarking:       "Маркировка:",
+	LabelSpecification: "Спецификация:",
+	LabelNote:          "Примечание:",
+	LabelTitle:         "Название:",
+	LabelType:          "Тип:",
+
+	SuffixPieces:    " шт",
+	SuffixComponent: " компонент",
 
 	ButtonOK:     "OK",
 	ButtonCansel: "Отмена",
@@ -56,12 +91,9 @@ var T = struct {
 	ButtonChange: "Изменить",
 	ButtonDelete: "Удалить",
 	ButtonSearch: "Поиск",
-}
+	ButtonChoose: "Выбрать",
 
-var HeadingType = map[string]string{ // TO-DO
-	"EntityType": T.HeadingEntityType,
-}
-
-var TitleType = map[string]string{ // TO-DO
-	"EntityType": T.TextEntityTypeTitle,
+	MarkingNo:   "Нет",
+	MarkingAll:  "Сквозная",
+	MarkingYear: "По годам",
 }
